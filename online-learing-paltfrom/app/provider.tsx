@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
+import { UserDetailContext } from "@/context/UserDetailContext";
 
 interface ProviderProps {
   children: React.ReactNode;
@@ -9,7 +10,7 @@ interface ProviderProps {
 
 export default function Provider({ children }: ProviderProps) {
   const { user, isLoaded, isSignedIn } = useUser();
-  const [dbUser, setDbUser] = useState<any>(null);
+  const [userDetail, setUserDetail] = useState<any>(null);
 
   useEffect(() => {
     if (isLoaded && isSignedIn && user) {
@@ -24,7 +25,7 @@ export default function Provider({ children }: ProviderProps) {
 
       if (!email) return;
 
-      const resp = await fetch("/api/user", {
+      const result = await fetch("/api/user", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -35,8 +36,8 @@ export default function Provider({ children }: ProviderProps) {
         }),
       });
 
-      const data = await resp.json();
-      setDbUser(data);
+      const data = await result.json();
+      setUserDetail(data);
       console.log("Database user sync:", data);
     } catch (error) {
       console.error("Failed to check/create user:", error);
@@ -44,8 +45,8 @@ export default function Provider({ children }: ProviderProps) {
   };
 
   return (
-    <div>{children}</div>
+    <UserDetailContext.Provider value={{ userDetail, setUserDetail }}>
+      <div>{children}</div>
+    </UserDetailContext.Provider>
   );
 }
-
-
