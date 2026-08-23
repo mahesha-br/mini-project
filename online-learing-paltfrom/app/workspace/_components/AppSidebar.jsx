@@ -11,7 +11,6 @@ function AppSidebar() {
     return (
         <Sidebar>
             <SidebarHeader >
-
             </SidebarHeader>
             <SidebarContent>
                 <SidebarGroup />
