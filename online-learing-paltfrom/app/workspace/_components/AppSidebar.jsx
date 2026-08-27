@@ -1,3 +1,4 @@
+"use client";
 import React from "react";
 import {
     Sidebar,
@@ -14,12 +15,13 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Book, CompassIcon, LayoutDashboard, PencilRulerIcon, UserCircle2Icon, WalletCards } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const sideBarOptions = [
     {
         title: 'Dashboard',
         icon: LayoutDashboard,
-        path: '/#'
+        path: '/workspace'
     },
     {
         title: 'My Learning',
@@ -49,6 +51,9 @@ const sideBarOptions = [
 ]
 
 function AppSidebar() {
+
+    const path = usePathname();
+
     return (
         <Sidebar>
             <SidebarHeader>
@@ -63,16 +68,25 @@ function AppSidebar() {
                 </SidebarGroup>
                 <SidebarGroup>
                     <SidebarMenu>
-                        {sideBarOptions.map((item, index) => (
-                            <SidebarMenuItem key={index}>
-                                <SidebarMenuButton asChild>
-                                    <Link href={item.path} className={`text-[17px]`}>
-                                        <item.icon className="h-7 w-7" />
-                                        <span>{item.title}</span>
-                                    </Link>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-                        ))}
+                        {sideBarOptions.map((item, index) => {
+                            const isActive = item.path === '/workspace'
+                                ? path === '/workspace'
+                                : path.includes(item.path);
+
+                            return (
+                                <SidebarMenuItem key={index}>
+                                    <SidebarMenuButton asChild isActive={isActive}>
+                                        <Link
+                                            href={item.path}
+                                            className={`text-[17px] ${isActive ? 'bg-gray-600 text-white font-semibold' : ''}`}
+                                        >
+                                            <item.icon className="h-7 w-7" />
+                                            <span>{item.title}</span>
+                                        </Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            );
+                        })}
                     </SidebarMenu>
                     <SidebarGroupContent />
                 </SidebarGroup>
