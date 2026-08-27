@@ -7,6 +7,7 @@ import {
     SidebarHeader,
 } from "@/components/ui/sidebar"
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
 
 function AppSidebar() {
     return (
@@ -18,7 +19,10 @@ function AppSidebar() {
                 </div>
             </SidebarHeader>
             <SidebarContent>
-                <SidebarGroup />
+                <SidebarGroup>
+                    <Button>Create New Course</Button>
+                </SidebarGroup>
+
                 <SidebarGroup />
             </SidebarContent>
             <SidebarFooter />
