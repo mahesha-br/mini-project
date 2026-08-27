@@ -4,10 +4,49 @@ import {
     SidebarContent,
     SidebarFooter,
     SidebarGroup,
+    SidebarGroupContent,
     SidebarHeader,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { Book, CompassIcon, LayoutDashboard, PencilRulerIcon, UserCircle2Icon, WalletCards } from "lucide-react";
+import Link from "next/link";
+
+const sideBarOptions = [
+    {
+        title: 'Dashboard',
+        icon: LayoutDashboard,
+        path: '/#'
+    },
+    {
+        title: 'My Learning',
+        icon: Book,
+        path: '/workspace/my-courses'
+    },
+    {
+        title: 'Explore Courses',
+        icon: CompassIcon,
+        path: '/workspace/explore'
+    },
+    {
+        title: 'AI Tools',
+        icon: PencilRulerIcon,
+        path: '/workspace/ai-tools'
+    },
+    {
+        title: 'Billing',
+        icon: WalletCards,
+        path: '/workspace/billing'
+    },
+    {
+        title: 'Profile',
+        icon: UserCircle2Icon,
+        path: '/workspace/profile'
+    }
+]
 
 function AppSidebar() {
     return (
@@ -22,7 +61,21 @@ function AppSidebar() {
                 <SidebarGroup>
                     <Button>Create New Course</Button>
                 </SidebarGroup>
-
+                <SidebarGroup>
+                    <SidebarMenu>
+                        {sideBarOptions.map((item, index) => (
+                            <SidebarMenuItem key={index}>
+                                <SidebarMenuButton asChild>
+                                    <Link href={item.path} className={`text-[17px]`}>
+                                        <item.icon className="h-7 w-7" />
+                                        <span>{item.title}</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        ))}
+                    </SidebarMenu>
+                    <SidebarGroupContent />
+                </SidebarGroup>
                 <SidebarGroup />
             </SidebarContent>
             <SidebarFooter />
