@@ -1,5 +1,6 @@
 import { SignIn, UserButton, Show } from "@clerk/nextjs";
 
+
 export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-background text-foreground">
