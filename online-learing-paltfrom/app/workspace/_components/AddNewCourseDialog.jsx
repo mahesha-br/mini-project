@@ -64,7 +64,7 @@ function AddNewCourseDialog({ children }) {
                             </div>
                             <div>
                                 <label>Course Description (optional)</label>
-                                <Textarea placeholder="Course Description" onChange={(event) => onHandleInputCgange('Description', event?.target.value)} />
+                                <Textarea placeholder="Course Description" onChange={(event) => onHandleInputCgange('description', event?.target.value)} />
                             </div>
                             <div>
                                 <label>No. of Chapters</label>
