@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
     Dialog,
     DialogContent,
@@ -29,6 +29,27 @@ function AddNewCourseDialog({ children }) {
         { label: "Advanced", value: "advanced" },
     ];
 
+    const [formData, setFormData] = useState({
+        name: '',
+        description: '',
+        includeVideo: false,
+        noOfChapters: 1,
+        category: '',
+        level: ''
+    });
+
+
+    const onHandleInputCgange = (field, value) => {
+        setFormData(prev => ({
+            ...prev,
+            [field]: value
+        }));
+        console.log(formData);
+    }
+    const onGenerate = () => {
+        console.log(formData)
+    }
+
     return (
         <Dialog>
             <DialogTrigger asChild>{children}</DialogTrigger>
@@ -39,23 +60,26 @@ function AddNewCourseDialog({ children }) {
                         <div className="flex flex-col gap-4 mt-3">
                             <div>
                                 <label>Course Name</label>
-                                <Input placeholder="Course Name" />
+                                <Input placeholder="Course Name" onChange={(event) => onHandleInputCgange('courseName', event?.target.value)} />
                             </div>
                             <div>
                                 <label>Course Description (optional)</label>
-                                <Textarea placeholder="Course Description" />
+                                <Textarea placeholder="Course Description" onChange={(event) => onHandleInputCgange('Description', event?.target.value)} />
                             </div>
                             <div>
                                 <label>No. of Chapters</label>
-                                <Input type="number" placeholder="No. of chapters" />
+                                <Input type="number" placeholder="No. of chapters"
+                                    onChange={(event) => onHandleInputCgange('noOfChapters', event?.target.value)}
+                                />
                             </div>
                             <div className="flex gap-3 items-center">
                                 <label>Include video</label>
-                                <Switch />
+                                <Switch
+                                    onCheckedChange={() => onHandleInputCgange('includeVideo', !formData?.includeVideo)} />
                             </div>
                             <div>
                                 <label>Difficulty level</label>
-                                <Select>
+                                <Select onValueChange={(value) => onHandleInputCgange('level', value)}>
                                     <SelectTrigger className="w-full">
                                         <SelectValue placeholder="Difficulty level" />
                                     </SelectTrigger>
@@ -72,10 +96,12 @@ function AddNewCourseDialog({ children }) {
                             </div>
                             <div>
                                 <label>Category</label>
-                                <Input placeholder="Category" />
+                                <Input placeholder="Category"
+                                    onChange={(event) => onHandleInputCgange('category', event?.target.value)}
+                                />
                             </div>
                             <div className="mt-5">
-                                <Button className="w-full"><Sparkle /> Generate Course</Button>
+                                <Button className="w-full" onClick={onGenerate}><Sparkle /> Generate Course</Button>
                             </div>
                         </div>
                     </DialogDescription>
