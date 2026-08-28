@@ -1,9 +1,12 @@
 import React from "react";
+import WelcomeBanner from "./_components/WelcomeBanner";
 
 function Workspace() {
     return (
-        <div>workspace</div>
-    )
+        <div>
+            <WelcomeBanner />
+        </div>
+    );
 }
 
-export default Workspace
+export default Workspace;
