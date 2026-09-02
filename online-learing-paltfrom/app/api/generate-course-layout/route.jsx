@@ -35,6 +35,7 @@ export async function POST(req) {
     try {
         const formData = await req.json();
 
+        // Model set to gemini-2.0-flash
         const model = 'gemini-3.6-flash';
         const config = {
             responseMimeType: 'application/json',
@@ -57,6 +58,13 @@ export async function POST(req) {
             courseLayoutJson = response.text;
         }
 
+        // Get banner image prompt from generated course layout
+        const imagePrompt = courseLayoutJson?.course?.bannerImagePrompt;
+        let bannerImageData = null;
+        if (imagePrompt) {
+            bannerImageData = await GenerateImage(imagePrompt);
+        }
+
         // Unique Course ID (from client or generated on server)
         const courseId = formData?.courseId || crypto.randomUUID();
 
@@ -76,10 +84,35 @@ export async function POST(req) {
         return NextResponse.json({
             courseId: courseId,
             result: dbResult[0],
-            courseLayout: courseLayoutJson
+            courseLayout: courseLayoutJson,
+            bannerImage: bannerImageData
         });
     } catch (error) {
         console.error("Error generating course layout:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
+export const GenerateImage = async (prompt) => {
+    try {
+        const response = await fetch("https://api.limewire.com/v1/generations/image", {
+            method: "POST",
+            headers: {
+                "x-api-key": process.env.GEMINI_API_KEY,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                input: prompt || "self-portrait of a woman, lightning in the background",
+                aspect_ratio: "1:1",
+                width: 1024,
+                height: 1024,
+                mode: "sdxl"
+            })
+        });
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error("Error generating image:", error);
+        return null;
+    }
+};
