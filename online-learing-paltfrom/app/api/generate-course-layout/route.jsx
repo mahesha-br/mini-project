@@ -36,18 +36,42 @@ export async function POST(req) {
     try {
         const formData = await req.json();
 
-        // Model set to gemini-2.0-flash
-        const model = 'gemini-3.6-flash';
         const config = {
             responseMimeType: 'application/json',
         };
         const contents = PROMPT + JSON.stringify(formData);
 
-        const response = await ai.models.generateContent({
-            model,
-            config,
-            contents,
-        });
+        // Active, supported Gemini models for layout generation
+        const modelsToTry = [
+            'gemini-3.6-flash',
+            'gemini-3.5-flash',
+            'gemini-3.5-flash-lite',
+            'gemini-3.1-flash-lite'
+        ];
+        let response = null;
+        let lastError = null;
+
+        for (const modelName of modelsToTry) {
+            try {
+                response = await ai.models.generateContent({
+                    model: modelName,
+                    config,
+                    contents,
+                });
+                if (response?.text) {
+                    break;
+                }
+            } catch (err) {
+                console.warn(`Gemini model ${modelName} attempt error:`, err?.message || err);
+                lastError = err;
+                // Pause briefly before trying next model when high demand / overload occurs
+                await new Promise(res => setTimeout(res, 800));
+            }
+        }
+
+        if (!response?.text) {
+            throw lastError || new Error("All Gemini model attempts failed. Please try again.");
+        }
 
         console.log(response.text);
 
@@ -93,11 +117,17 @@ export async function POST(req) {
             }
         }
 
+        // User description: only set if explicitly provided by user, otherwise leave empty
+        const userDescription = formData?.description?.trim() ? formData.description.trim() : '';
+        if (courseLayoutJson?.course) {
+            courseLayoutJson.course.description = userDescription;
+        }
+
         // Save to database
         const dbResult = await db.insert(coursestable).values({
             cid: courseId,
             name: formData?.name || courseLayoutJson?.course?.name,
-            description: formData?.description || courseLayoutJson?.course?.description,
+            description: userDescription,
             noOfChapters: Number(formData?.noOfChapters || courseLayoutJson?.course?.noOfChapters || 1),
             includeVideo: Boolean(formData?.includeVideo),
             level: formData?.level || courseLayoutJson?.course?.level || 'beginner',
