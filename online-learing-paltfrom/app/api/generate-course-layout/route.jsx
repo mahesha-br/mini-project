@@ -1,7 +1,8 @@
 import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
 import { db } from "@/config/db";
-import { coursestable } from "@/config/schema";
+import { coursestable, usersTable } from "@/config/schema";
+import { eq } from "drizzle-orm";
 
 const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY,
@@ -59,14 +60,38 @@ export async function POST(req) {
         }
 
         // Get banner image prompt from generated course layout
-        const imagePrompt = courseLayoutJson?.course?.bannerImagePrompt;
+        const imagePrompt = courseLayoutJson?.course?.bannerImagePrompt || courseLayoutJson?.course?.name || formData?.name;
         let bannerImageData = null;
+        let bannerImageUrl = '';
+
         if (imagePrompt) {
             bannerImageData = await GenerateImage(imagePrompt);
+            bannerImageUrl = bannerImageData?.url || `https://image.pollinations.ai/prompt/${encodeURIComponent(imagePrompt)}?width=1024&height=1024&nologo=true&model=flux&enhance=true`;
         }
 
         // Unique Course ID (from client or generated on server)
         const courseId = formData?.courseId || crypto.randomUUID();
+
+        // Ensure user exists in usersTable before foreign key insertion
+        let validUserEmail = null;
+        if (formData?.userEmail) {
+            const existingUser = await db.select().from(usersTable).where(eq(usersTable.email, formData.userEmail));
+            if (existingUser?.length > 0) {
+                validUserEmail = formData.userEmail;
+            } else {
+                try {
+                    const userName = formData.userEmail.split('@')[0] || "User";
+                    await db.insert(usersTable).values({
+                        name: userName,
+                        email: formData.userEmail
+                    }).returning();
+                    validUserEmail = formData.userEmail;
+                } catch (userErr) {
+                    console.error("Error creating user entry in DB:", userErr);
+                    validUserEmail = null;
+                }
+            }
+        }
 
         // Save to database
         const dbResult = await db.insert(coursestable).values({
@@ -78,14 +103,18 @@ export async function POST(req) {
             level: formData?.level || courseLayoutJson?.course?.level || 'beginner',
             catetgory: formData?.category || courseLayoutJson?.course?.category,
             courseJson: courseLayoutJson,
-            userEmail: formData?.userEmail || null
+            bannerImageUrl: bannerImageUrl,
+            userEmail: validUserEmail
         }).returning();
+
+        console.log("Successfully stored course in database:", dbResult[0]);
 
         return NextResponse.json({
             courseId: courseId,
             result: dbResult[0],
             courseLayout: courseLayoutJson,
-            bannerImage: bannerImageData
+            bannerImage: bannerImageData,
+            bannerImageUrl: bannerImageUrl
         });
     } catch (error) {
         console.error("Error generating course layout:", error);
@@ -95,24 +124,14 @@ export async function POST(req) {
 
 export const GenerateImage = async (prompt) => {
     try {
-        const response = await fetch("https://api.limewire.com/v1/generations/image", {
-            method: "POST",
-            headers: {
-                "x-api-key": process.env.GEMINI_API_KEY,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                input: prompt || "self-portrait of a woman, lightning in the background",
-                aspect_ratio: "1:1",
-                width: 1024,
-                height: 1024,
-                mode: "sdxl"
-            })
-        });
-        const data = await response.json();
-        return data;
+        const cleanPrompt = prompt || "Create a modern, flat-style 2D digital illustration with 3D elements for an educational course banner";
+        const seed = Math.floor(Math.random() * 1000000);
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(cleanPrompt)}?width=1024&height=1024&nologo=true&seed=${seed}&model=flux&enhance=true`;
+        return {
+            url: imageUrl
+        };
     } catch (error) {
-        console.error("Error generating image:", error);
+        console.error("Error generating image with Pollinations AI:", error?.message || error);
         return null;
     }
 };

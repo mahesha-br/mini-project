@@ -20,7 +20,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button";
-import { Sparkle } from "lucide-react";
+import { Sparkles, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 
@@ -71,13 +71,15 @@ function AddNewCourseDialog({ children }) {
             const data = await response.json();
             console.log("Generated course result:", data);
 
-            const targetCourseId = data?.courseId || courseId;
-            if (targetCourseId) {
+            if (response.ok && data?.result) {
+                const targetCourseId = data?.courseId || data?.result?.cid || courseId;
                 router.push('/workspace/edit-course/' + targetCourseId);
+            } else {
+                console.error("Error storing course to database:", data?.error);
+                setLoading(false);
             }
         } catch (error) {
             console.error("Error generating course layout:", error);
-        } finally {
             setLoading(false);
         }
     }
@@ -92,26 +94,29 @@ function AddNewCourseDialog({ children }) {
                         <div className="flex flex-col gap-4 mt-3">
                             <div>
                                 <label>Course Name</label>
-                                <Input placeholder="Course Name" onChange={(event) => onHandleInputChange('name', event?.target.value)} />
+                                <Input placeholder="Course Name" onChange={(event) => onHandleInputChange('name', event?.target.value)} disabled={loading} />
                             </div>
                             <div>
                                 <label>Course Description (optional)</label>
-                                <Textarea placeholder="Course Description" onChange={(event) => onHandleInputChange('description', event?.target.value)} />
+                                <Textarea placeholder="Course Description" onChange={(event) => onHandleInputChange('description', event?.target.value)} disabled={loading} />
                             </div>
                             <div>
                                 <label>No. of Chapters</label>
                                 <Input type="number" placeholder="No. of chapters"
                                     onChange={(event) => onHandleInputChange('noOfChapters', Number(event?.target.value))}
+                                    disabled={loading}
                                 />
                             </div>
                             <div className="flex gap-3 items-center">
                                 <label>Include video</label>
                                 <Switch
-                                    onCheckedChange={(checked) => onHandleInputChange('includeVideo', checked)} />
+                                    onCheckedChange={(checked) => onHandleInputChange('includeVideo', checked)}
+                                    disabled={loading}
+                                />
                             </div>
                             <div>
                                 <label>Difficulty level</label>
-                                <Select onValueChange={(value) => onHandleInputChange('level', value)}>
+                                <Select onValueChange={(value) => onHandleInputChange('level', value)} disabled={loading}>
                                     <SelectTrigger className="w-full">
                                         <SelectValue placeholder="Difficulty level" />
                                     </SelectTrigger>
@@ -130,11 +135,22 @@ function AddNewCourseDialog({ children }) {
                                 <label>Category</label>
                                 <Input placeholder="Category"
                                     onChange={(event) => onHandleInputChange('category', event?.target.value)}
+                                    disabled={loading}
                                 />
                             </div>
                             <div className="mt-5">
-                                <Button className="w-full" onClick={onGenerate} disabled={loading}>
-                                    <Sparkle /> {loading ? "Generating..." : "Generate Course"}
+                                <Button className="w-full flex items-center justify-center gap-2" onClick={onGenerate} disabled={loading}>
+                                    {loading ? (
+                                        <>
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            Generating Course & Redirecting...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Sparkles className="h-4 w-4" />
+                                            Generate Course
+                                        </>
+                                    )}
                                 </Button>
                             </div>
                         </div>
