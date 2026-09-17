@@ -8,7 +8,7 @@ const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY,
 });
 
-const PROMPT = `Genrate Learning Course depends on following details. In which Make sure to add Course Name, Description,Course Banner Image Prompt (Create a modern, flat-style 2D digital illustration representing user Topic. Include UI/UX elements such as mockup screens, text blocks, icons, buttons, and creative workspace tools. Add symbolic elements related to user Course, like sticky notes, design components, and visual aids. Use a vibrant color palette (blues, purples, oranges) with a clean, professional look. The illustration should feel creative, tech-savvy, and educational, ideal for visualizing concepts in user Course) for Course Banner in 3d format Chapter Name, , Topic under each chapters , Duration for each chapters etc, in JSON format only
+const PROMPT = `Generate Learning Course based on the following details. In which Make sure to add Course Name, Description, Chapter Name, Topic under each chapter, Duration for each chapter etc, in JSON format only.
 Schema:
 {
   "course": {
@@ -18,7 +18,6 @@ Schema:
     "level": "string",
     "includeVideo": "boolean",
     "noOfChapters": "number",
-    "bannerImagePrompt": "string",
     "chapters": [
       {
         "chapterName": "string",
@@ -32,6 +31,34 @@ Schema:
 }
 , User Input: `;
 
+const CURATED_BANNERS = {
+    code: [
+        'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1600&h=900&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=1600&h=900&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=1600&h=900&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1587620962725-abab7fe55159?w=1600&h=900&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1600&h=900&auto=format&fit=crop&q=80'
+    ],
+    design: [
+        'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=1600&h=900&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?w=1600&h=900&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=1600&h=900&auto=format&fit=crop&q=80'
+    ],
+    business: [
+        'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1600&h=900&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=1600&h=900&auto=format&fit=crop&q=80'
+    ],
+    data: [
+        'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1600&h=900&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=1600&h=900&auto=format&fit=crop&q=80'
+    ],
+    general: [
+        'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1600&h=900&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=1600&h=900&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1600&h=900&auto=format&fit=crop&q=80'
+    ]
+};
+
 export async function POST(req) {
     try {
         const formData = await req.json();
@@ -41,7 +68,6 @@ export async function POST(req) {
         };
         const contents = PROMPT + JSON.stringify(formData);
 
-        // Active, supported Gemini models for layout generation
         const modelsToTry = [
             'gemini-3.6-flash',
             'gemini-3.5-flash'
@@ -69,9 +95,6 @@ export async function POST(req) {
             throw lastError || new Error("All Gemini model attempts failed. Please try again.");
         }
 
-        console.log(response.text);
-
-        // Parse generated AI response JSON
         let courseLayoutJson = {};
         try {
             courseLayoutJson = JSON.parse(response.text);
@@ -79,20 +102,19 @@ export async function POST(req) {
             courseLayoutJson = response.text;
         }
 
-        // Get banner image prompt from generated course layout
-        const imagePrompt = courseLayoutJson?.course?.bannerImagePrompt || courseLayoutJson?.course?.name || formData?.name;
-        let bannerImageData = null;
-        let bannerImageUrl = '';
+        const userDescription = formData?.description?.trim() ? formData.description.trim() : '';
+        const aiDescription = courseLayoutJson?.course?.description?.trim() ? courseLayoutJson.course.description.trim() : '';
+        const finalDescription = userDescription || aiDescription || '';
 
-        if (imagePrompt) {
-            bannerImageData = await GenerateImage(imagePrompt);
-            bannerImageUrl = bannerImageData?.url || `https://image.pollinations.ai/prompt/${encodeURIComponent(imagePrompt)}?width=1024&height=1024&nologo=true&model=flux&enhance=true`;
+        if (courseLayoutJson?.course) {
+            courseLayoutJson.course.description = finalDescription;
         }
 
-        // Unique Course ID (from client or generated on server)
+        const courseTitle = courseLayoutJson?.course?.name || formData?.name || "Course";
+        const bannerImageUrl = await GenerateBannerImage(courseTitle, finalDescription);
+
         const courseId = formData?.courseId || crypto.randomUUID();
 
-        // Ensure user exists in usersTable before foreign key insertion
         let validUserEmail = null;
         if (formData?.userEmail) {
             const existingUser = await db.select().from(usersTable).where(eq(usersTable.email, formData.userEmail));
@@ -113,16 +135,6 @@ export async function POST(req) {
             }
         }
 
-        // Use user-provided description if available, otherwise preserve AI-generated description from Gemini
-        const userDescription = formData?.description?.trim() ? formData.description.trim() : '';
-        const aiDescription = courseLayoutJson?.course?.description?.trim() ? courseLayoutJson.course.description.trim() : '';
-        const finalDescription = userDescription || aiDescription || '';
-
-        if (courseLayoutJson?.course) {
-            courseLayoutJson.course.description = finalDescription;
-        }
-
-        // Save to database
         const dbResult = await db.insert(coursestable).values({
             cid: courseId,
             name: formData?.name || courseLayoutJson?.course?.name,
@@ -142,7 +154,6 @@ export async function POST(req) {
             courseId: courseId,
             result: dbResult[0],
             courseLayout: courseLayoutJson,
-            bannerImage: bannerImageData,
             bannerImageUrl: bannerImageUrl
         });
     } catch (error) {
@@ -151,16 +162,32 @@ export async function POST(req) {
     }
 }
 
-export const GenerateImage = async (prompt) => {
+export const GenerateBannerImage = async (courseName, description) => {
     try {
-        const cleanPrompt = prompt || "Create a modern, flat-style 2D digital illustration with 3D elements for an educational course banner";
-        const seed = Math.floor(Math.random() * 1000000);
-        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(cleanPrompt)}?width=1024&height=1024&nologo=true&seed=${seed}&model=flux&enhance=true`;
-        return {
-            url: imageUrl
-        };
-    } catch (error) {
-        console.error("Error generating image with Pollinations AI:", error?.message || error);
-        return null;
+        const prompt = `Based on the course title "${courseName || 'Course'}" and description "${description || ''}", respond with ONLY 2 comma-separated keywords describing the subject (e.g. "programming, code" or "design, art").`;
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-3.6-flash',
+            contents: prompt,
+        });
+
+        const text = (response?.text || "").toLowerCase();
+        let category = 'general';
+        if (text.includes('code') || text.includes('program') || text.includes('python') || text.includes('react') || text.includes('web') || text.includes('tech') || text.includes('dev')) {
+            category = 'code';
+        } else if (text.includes('design') || text.includes('art') || text.includes('ui') || text.includes('ux') || text.includes('graphic')) {
+            category = 'design';
+        } else if (text.includes('data') || text.includes('ai') || text.includes('science') || text.includes('machine')) {
+            category = 'data';
+        } else if (text.includes('business') || text.includes('finance') || text.includes('market') || text.includes('management')) {
+            category = 'business';
+        }
+
+        const list = CURATED_BANNERS[category] || CURATED_BANNERS.general;
+        const randomIndex = Math.floor(Math.random() * list.length);
+        return list[randomIndex];
+    } catch (err) {
+        console.warn("Banner selection error:", err);
+        return 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1600&h=900&auto=format&fit=crop&q=80';
     }
 };
