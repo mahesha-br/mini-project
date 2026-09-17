@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import CourseInfo from "../_components/CourseInfo";
 import { Loader2 } from "lucide-react";
+import ChapterTopicList from "../_components/ChapterTopicList";
 
 function editCourse() {
     const { courseId } = useParams();
@@ -40,6 +41,7 @@ function editCourse() {
     return (
         <div className="p-5">
             <CourseInfo course={course} />
+            <ChapterTopicList course={course} />
         </div>
     );
 }
