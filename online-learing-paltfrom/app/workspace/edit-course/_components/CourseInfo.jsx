@@ -1,15 +1,38 @@
-import { Book, Clock, TrendingUp } from "lucide-react";
-import React from "react";
+"use client"
+import { Book, Clock, TrendingUp, Loader2 } from "lucide-react";
+import React, { useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import axios from "axios";
 
-function CourseInfo({ course }) {
+function CourseInfo({ course, refreshData }) {
     const courseLayout = course?.courseJson?.course;
     const courseName = courseLayout?.name || course?.name || 'Untitled Course';
     const description = courseLayout?.description || course?.description || '';
     const noOfChapters = courseLayout?.noOfChapters || course?.noOfChapters || courseLayout?.chapters?.length || 1;
     const level = courseLayout?.level || course?.level || 'Beginner';
     const bannerImageUrl = course?.bannerImageUrl || course?.courseJson?.bannerImageUrl || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1600&h=900&auto=format&fit=crop&q=80';
+
+    const [loadingContent, setLoadingContent] = useState(false);
+
+    const GenerateCourseContent = async () => {
+        setLoadingContent(true);
+        try {
+            const res = await axios.post('/api/generate-course-content', {
+                course: course,
+                courseTitle: courseName,
+                courseId: course?.cid
+            });
+            console.log("Generated course content:", res.data);
+            if (refreshData) {
+                refreshData();
+            }
+        } catch (error) {
+            console.error("Error generating course content:", error);
+        } finally {
+            setLoadingContent(false);
+        }
+    };
 
     return (
         <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center p-5 border rounded-xl shadow-sm bg-card w-full">
@@ -51,7 +74,16 @@ function CourseInfo({ course }) {
                     </div>
                 </div>
 
-                <Button>Generate content</Button>
+                <Button onClick={GenerateCourseContent} disabled={loadingContent}>
+                    {loadingContent ? (
+                        <span className="flex items-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Generating content...
+                        </span>
+                    ) : (
+                        "Generate content"
+                    )}
+                </Button>
             </div>
 
             <div className="relative w-full md:w-[300px] lg:w-[380px] xl:w-[420px] h-[200px] sm:h-[240px] md:h-[260px] lg:h-[280px] shrink-0 rounded-xl overflow-hidden shadow-md border self-center md:self-stretch">

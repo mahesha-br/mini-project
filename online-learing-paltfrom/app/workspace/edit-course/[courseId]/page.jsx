@@ -40,7 +40,7 @@ function editCourse() {
 
     return (
         <div className="p-5">
-            <CourseInfo course={course} />
+            <CourseInfo course={course} refreshData={GetCourseInfo} />
             <ChapterTopicList course={course} />
         </div>
     );
