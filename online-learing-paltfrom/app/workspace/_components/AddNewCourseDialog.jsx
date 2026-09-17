@@ -7,7 +7,7 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -18,15 +18,15 @@ import {
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-
 function AddNewCourseDialog({ children }) {
     const { user } = useUser();
     const router = useRouter();
+    const [open, setOpen] = useState(false);
 
     const items = [
         { label: "Beginner", value: "beginner" },
@@ -73,6 +73,8 @@ function AddNewCourseDialog({ children }) {
 
             if (response.ok && data?.result) {
                 const targetCourseId = data?.courseId || data?.result?.cid || courseId;
+                setLoading(false);
+                setOpen(false);
                 router.push('/workspace/edit-course/' + targetCourseId);
             } else {
                 console.error("Error storing course to database:", data?.error);
@@ -85,7 +87,9 @@ function AddNewCourseDialog({ children }) {
     }
 
     return (
-        <Dialog>
+        <Dialog open={open} onOpenChange={(val) => {
+            if (!loading) setOpen(val);
+        }}>
             <DialogTrigger asChild>{children}</DialogTrigger>
             <DialogContent>
                 <DialogHeader>

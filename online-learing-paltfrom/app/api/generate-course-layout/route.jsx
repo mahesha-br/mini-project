@@ -44,9 +44,7 @@ export async function POST(req) {
         // Active, supported Gemini models for layout generation
         const modelsToTry = [
             'gemini-3.6-flash',
-            'gemini-3.5-flash',
-            'gemini-3.5-flash-lite',
-            'gemini-3.1-flash-lite'
+            'gemini-3.5-flash'
         ];
         let response = null;
         let lastError = null;
@@ -64,8 +62,6 @@ export async function POST(req) {
             } catch (err) {
                 console.warn(`Gemini model ${modelName} attempt error:`, err?.message || err);
                 lastError = err;
-                // Pause briefly before trying next model when high demand / overload occurs
-                await new Promise(res => setTimeout(res, 800));
             }
         }
 
@@ -117,17 +113,20 @@ export async function POST(req) {
             }
         }
 
-        // User description: only set if explicitly provided by user, otherwise leave empty
+        // Use user-provided description if available, otherwise preserve AI-generated description from Gemini
         const userDescription = formData?.description?.trim() ? formData.description.trim() : '';
+        const aiDescription = courseLayoutJson?.course?.description?.trim() ? courseLayoutJson.course.description.trim() : '';
+        const finalDescription = userDescription || aiDescription || '';
+
         if (courseLayoutJson?.course) {
-            courseLayoutJson.course.description = userDescription;
+            courseLayoutJson.course.description = finalDescription;
         }
 
         // Save to database
         const dbResult = await db.insert(coursestable).values({
             cid: courseId,
             name: formData?.name || courseLayoutJson?.course?.name,
-            description: userDescription,
+            description: finalDescription,
             noOfChapters: Number(formData?.noOfChapters || courseLayoutJson?.course?.noOfChapters || 1),
             includeVideo: Boolean(formData?.includeVideo),
             level: formData?.level || courseLayoutJson?.course?.level || 'beginner',
