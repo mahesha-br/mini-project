@@ -5,6 +5,7 @@ import React, { useEffect, useState } from "react";
 import AddNewCourseDialog from "./AddNewCourseDialog";
 import axios from "axios";
 import { useUser } from "@clerk/nextjs";
+import CourseCard from "./CourseCard";
 
 function CourseList() {
     const [courseList, setCourseList] = useState([]);
@@ -16,6 +17,7 @@ function CourseList() {
     const GetCourseList = async () => {
         const result = await axios.get('/api/courses');
         console.log(result.data);
+        setCourseList(result.data)
     }
     return (
         <div className="mt-10">
@@ -29,8 +31,10 @@ function CourseList() {
                         <Button>+ Create your first course</Button>
                     </AddNewCourseDialog>
                 </div> :
-                <div>
-                    List of Courses
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                    {courseList.map((course, index) => (
+                        <CourseCard course={course} key={index} />
+                    ))}
                 </div>
             }
         </div>
