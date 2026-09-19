@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
+import { useRouter } from "next/navigation";
 
 function CourseInfo({ course, refreshData }) {
     const courseLayout = course?.courseJson?.course;
@@ -14,6 +15,8 @@ function CourseInfo({ course, refreshData }) {
     const bannerImageUrl = course?.bannerImageUrl || course?.courseJson?.bannerImageUrl || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1600&h=900&auto=format&fit=crop&q=80';
 
     const [loadingContent, setLoadingContent] = useState(false);
+
+    const router = useRouter();
 
     const GenerateCourseContent = async () => {
         setLoadingContent(true);
@@ -27,6 +30,7 @@ function CourseInfo({ course, refreshData }) {
             if (refreshData) {
                 refreshData();
             }
+            router.replace('/workspace');
         } catch (error) {
             console.error("Error generating course content:", error);
         } finally {

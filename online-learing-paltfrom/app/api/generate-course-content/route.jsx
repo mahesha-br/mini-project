@@ -86,7 +86,7 @@ export async function POST(req) {
             })
         );
 
-        // Update database courseJson with generated topics content & YouTube videos
+        // Update database courseContent & courseJson with generated topics content & YouTube videos
         if (targetCourseId) {
             const existingCourse = await db.select().from(coursestable).where(eq(coursestable.cid, targetCourseId));
             if (existingCourse?.length > 0) {
@@ -103,9 +103,15 @@ export async function POST(req) {
                 }
                 updatedCourseJson.generatedContent = generatedContentResult;
 
-                await db.update(coursestable)
-                    .set({ courseJson: updatedCourseJson })
-                    .where(eq(coursestable.cid, targetCourseId));
+                const dbResp = await db.update(coursestable)
+                    .set({
+                        courseContent: generatedContentResult,
+                        courseJson: updatedCourseJson
+                    })
+                    .where(eq(coursestable.cid, targetCourseId))
+                    .returning();
+
+                console.log("Successfully updated course content & layout in database:", dbResp);
             }
         }
 
