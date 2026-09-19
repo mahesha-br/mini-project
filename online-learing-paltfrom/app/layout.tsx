@@ -7,6 +7,7 @@ import Link from "next/link";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import Provider from "./provider";
+import { Toaster } from "@/components/ui/toaster";
 
 const playfairDisplayHeading = Playfair_Display({ subsets: ['latin'], variable: '--font-heading' });
 
@@ -82,6 +83,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <body className="min-h-full flex flex-col">
           <Provider>
             {children}
+            <Toaster />
           </Provider>
         </body>
       </html>
