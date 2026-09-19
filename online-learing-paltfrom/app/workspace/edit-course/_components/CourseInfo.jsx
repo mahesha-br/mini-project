@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 function CourseInfo({ course, refreshData }) {
     const courseLayout = course?.courseJson?.course;
@@ -31,10 +32,12 @@ function CourseInfo({ course, refreshData }) {
                 refreshData();
             }
             router.replace('/workspace');
+            toast.success("Course Generated sucessfully");
         } catch (error) {
-            console.error("Error generating course content:", error);
-        } finally {
+            console.error(error);
             setLoadingContent(false);
+            toast.error("Server Side error,Try Again!");
+
         }
     };
 
