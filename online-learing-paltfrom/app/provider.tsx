@@ -36,9 +36,16 @@ export default function Provider({ children }: ProviderProps) {
         }),
       });
 
+      if (!result.ok) {
+        console.error("Failed to sync user, server status:", result.status);
+        return;
+      }
+
       const data = await result.json();
-      setUserDetail(data);
-      console.log("Database user sync:", data);
+      if (data && !data.error) {
+        setUserDetail(data);
+        console.log("Database user sync:", data);
+      }
     } catch (error) {
       console.error("Failed to check/create user:", error);
     }

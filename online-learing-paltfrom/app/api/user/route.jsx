@@ -7,13 +7,17 @@ export async function POST(req) {
     try {
         const { email, name } = await req.json();
 
+        if (!email) {
+            return NextResponse.json({ error: "Email is required" }, { status: 400 });
+        }
+
         // Check if user already exists
         const existingUsers = await db.select().from(usersTable).where(eq(usersTable.email, email));
 
         // If new user
         if (existingUsers?.length === 0) {
             const newUser = await db.insert(usersTable).values({
-                name: name,
+                name: name || email.split('@')[0],
                 email: email
             }).returning();
 
