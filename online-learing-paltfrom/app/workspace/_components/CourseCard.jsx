@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Book, PlayCircle, Settings } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import React, { useState, useEffect } from "react";
 
 const DEFAULT_BANNER = "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=80";
@@ -27,11 +28,16 @@ function CourseCard({ course }) {
             />
             <div className="p-3 flex-col gap-3">
                 <h2 className="font-bold text-lg">{courseJson?.name}</h2>
-                <p className="line-clamp-3 text-gray-400 text-sm">{courseJson.description}</p>
+                <p className="line-clamp-3 text-gray-400 text-sm">{courseJson?.description}</p>
                 <div className="flex justify-between items-center p-3">
                     <h2 className="flex items-center text-sm gap-2"><Book className="text-primary h-5 w-5" />{courseJson?.noOfChapters} Chapters</h2>
-                    {course?.courseContent?.length ? <Button size={'sm'}><PlayCircle />Start Learing</Button> :
-                        <Button size={'sm'} variant={'outline'}><Settings /> Generate Course</Button>}
+                    {course?.courseContent?.length ? (
+                        <Button size={'sm'}><PlayCircle />Start Learning</Button>
+                    ) : (
+                        <Link href={'/workspace/edit-course/' + course?.cid}>
+                            <Button size={'sm'} variant={'outline'}><Settings />Generate Course</Button>
+                        </Link>
+                    )}
                 </div>
             </div>
         </div>
