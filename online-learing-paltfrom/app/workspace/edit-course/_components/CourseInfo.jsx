@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import Link from "next/link";
 
 function CourseInfo({ course, refreshData, ViewCourse }) {
     const courseLayout = course?.courseJson?.course;
@@ -92,7 +93,7 @@ function CourseInfo({ course, refreshData, ViewCourse }) {
                             "Generate content"
                         )}
                     </Button>
-                    : <Button> <PlayCircle />Continue Learning</Button>}
+                    : <Link href={'/course/' + course?.cid}> <Button> <PlayCircle />Continue Learning</Button></Link>}
             </div>
 
             <div className="relative w-full md:w-[300px] lg:w-[380px] xl:w-[420px] h-[200px] sm:h-[240px] md:h-[260px] lg:h-[280px] shrink-0 rounded-xl overflow-hidden shadow-md border self-center md:self-stretch">
