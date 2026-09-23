@@ -1,7 +1,9 @@
 import axios from "axios";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
 function EnrollCourseList() {
+
+    const [enrolledcoursedList, setEnrolledCourseList] = useState();
 
     useEffect(() => {
         GetEnrolledCourse();
@@ -11,12 +13,13 @@ function EnrollCourseList() {
         const result = await axios.get('/api/enroll-course');
 
         console.log(result);
+        setEnrolledCourseList(result.data);
 
     }
 
-    return (
-        <div>
-            EnrollCourseList
+    return enrolledcoursedList?.length > 0 && (
+        <div className="mt-3">
+            <h2 className="font-bold text-xl">Continue Learning your courses</h2>
         </div>
     )
 
