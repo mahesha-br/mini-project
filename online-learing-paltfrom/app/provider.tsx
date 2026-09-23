@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { UserDetailContext } from "@/context/UserDetailContext";
+import { SelectedChapterIndexContent } from "@/context/SelectedChapterIndexContent";
 
 interface ProviderProps {
   children: React.ReactNode;
@@ -11,6 +12,7 @@ interface ProviderProps {
 export default function Provider({ children }: ProviderProps) {
   const { user, isLoaded, isSignedIn } = useUser();
   const [userDetail, setUserDetail] = useState<any>(null);
+  const [selectedChapterIndex, setSelectedChapterIndex] = useState(0);
 
   useEffect(() => {
     if (isLoaded && isSignedIn && user) {
@@ -53,7 +55,10 @@ export default function Provider({ children }: ProviderProps) {
 
   return (
     <UserDetailContext.Provider value={{ userDetail, setUserDetail }}>
-      <div>{children}</div>
+      <SelectedChapterIndexContent.Provider value={{ selectedChapterIndex, setSelectedChapterIndex } as any} >
+        <div>{children}</div>
+      </SelectedChapterIndexContent.Provider>
+
     </UserDetailContext.Provider>
   );
 }
