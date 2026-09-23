@@ -16,7 +16,7 @@ function ChapterListSidebar({ courseInfo }) {
 
 
     return (
-        <div className="w-80 bg-secondary h-screen p-5 border-r overflow-y-auto">
+        <div className="w-80 bg-secondary h-screen p-5 border-r sticky top-0 overflow-y-auto">
             <h2 className="my-3 font-bold text-xl">Chapters ({chapters?.length})</h2>
             <Accordion type="single" collapsible defaultValue="item-0">
                 {chapters?.map((chapter, index) => (

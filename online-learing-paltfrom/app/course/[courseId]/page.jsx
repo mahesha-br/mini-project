@@ -29,9 +29,11 @@ function Course() {
     return (
         <div>
             <AppHeader hideSidebar={true} />
-            <div className="flex gap-10">
+            <div className="flex gap-5">
                 <ChapterListSidebar courseInfo={courseInfo} />
-                <ChapterContent courseInfo={courseInfo} />
+                <div className="flex-1">
+                    <ChapterContent courseInfo={courseInfo} />
+                </div>
             </div>
         </div>
     );
