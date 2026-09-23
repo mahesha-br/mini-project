@@ -1,10 +1,16 @@
+import { Button } from "@/components/ui/button";
 import { SelectedChapterIndexContent } from "@/context/SelectedChapterIndexContent";
-import { PlayCircle } from "lucide-react";
+import axios from "axios";
+import { CheckCircle, PlayCircle } from "lucide-react";
+import { useParams } from "next/navigation";
 import React, { useContext } from "react";
 import YouTube from 'react-youtube';
+import { toast } from "sonner";
 
-function ChapterContent({ courseInfo }) {
+function ChapterContent({ courseInfo, refreshData }) {
+    const { courseId } = useParams();
     const course = courseInfo?.courses;
+    const enrollCourse = courseInfo?.enrollCourse;
     const courseContent = course?.courseContent;
     const chapters = course?.courseJson?.course?.chapters;
     const { selectedChapterIndex } = useContext(SelectedChapterIndexContent);
@@ -16,11 +22,35 @@ function ChapterContent({ courseInfo }) {
     const topics = currentContent?.content?.topics || currentContent?.courseData?.topics || currentContent?.topics || currentChapter?.topics;
     const chapterName = currentContent?.content?.chapterName || currentContent?.chapterName || currentChapter?.chapterName || currentChapter?.title;
 
+    const markChapterCompleted = async () => {
+        let completedChapters = Array.isArray(enrollCourse?.completedChapters)
+            ? [...enrollCourse.completedChapters]
+            : (Array.isArray(enrollCourse?.completedChapter) ? [...enrollCourse.completedChapter] : []);
+
+        if (!completedChapters.includes(selectedChapterIndex)) {
+            completedChapters.push(selectedChapterIndex);
+            const result = await axios.put('/api/enroll-course', {
+                courseId: courseId,
+                completedChapters: completedChapters
+            });
+            console.log("Updated completed chapters:", result.data);
+            refreshData && refreshData();
+            toast.success('Chapter Marked as Completed!');
+        } else {
+            toast.info('Chapter already marked as completed!');
+        }
+    };
+
+    const isCompleted = (enrollCourse?.completedChapters || enrollCourse?.completedChapter || [])?.includes(selectedChapterIndex);
+
     return (
         <div className="p-10">
-
-            <h2 className="font-bold text-2xl">{selectedChapterIndex + 1}. {chapterName}</h2>
-
+            <div className="flex justify-between items-center">
+                <h2 className="font-bold text-2xl">{selectedChapterIndex + 1}. {chapterName}</h2>
+                <Button onClick={() => markChapterCompleted()} disabled={isCompleted}>
+                    <CheckCircle /> {isCompleted ? 'Completed' : 'Mark as completed'}
+                </Button>
+            </div>
             <h2 className="my-2 font-bold text-lg flex gap-2">Related Videos<PlayCircle /></h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols3 gap-5">

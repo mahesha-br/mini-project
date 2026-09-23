@@ -59,3 +59,23 @@ export async function GET(req) {
         return NextResponse.json(result);
     }
 }
+
+export async function PUT(req) {
+    const { completedChapters, completedChapter, completedChapetr, courseId } = await req.json();
+    const chaptersToSave = completedChapters || completedChapter || completedChapetr || [];
+    const user = await currentUser();
+    const userEmail = user?.primaryEmailAddress?.emailAddress;
+
+    if (!userEmail) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const result = await db.update(enrollCourseTable).set({
+        completedChapters: chaptersToSave
+    }).where(and(
+        eq(enrollCourseTable.cid, courseId),
+        eq(enrollCourseTable.userEmail, userEmail)
+    )).returning(enrollCourseTable);
+
+    return NextResponse.json(result);
+}
