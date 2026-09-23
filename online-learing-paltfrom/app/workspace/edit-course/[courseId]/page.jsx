@@ -6,7 +6,7 @@ import CourseInfo from "../_components/CourseInfo";
 import { Loader2 } from "lucide-react";
 import ChapterTopicList from "../_components/ChapterTopicList";
 
-function editCourse() {
+function EditCourse({ ViewCourse = false }) {
     const { courseId } = useParams();
     const [loading, setLoading] = useState(true);
     const [course, setCourse] = useState();
@@ -40,10 +40,10 @@ function editCourse() {
 
     return (
         <div className="p-5">
-            <CourseInfo course={course} refreshData={GetCourseInfo} />
+            <CourseInfo course={course} refreshData={GetCourseInfo} ViewCourse={ViewCourse} />
             <ChapterTopicList course={course} />
         </div>
     );
 }
 
-export default editCourse;
+export default EditCourse;

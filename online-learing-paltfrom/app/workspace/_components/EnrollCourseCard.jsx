@@ -18,9 +18,10 @@ function EnrollCourseCard({ course, enrollCourse }) {
     const [imgSrc, setImgSrc] = useState(initialBanner);
 
     const calculateProgress = () => {
-        return (enrollCourse?.completedChapters?.length ?? 0 / course?.courseContent?.length) * 100;
-
-    }
+        const completed = enrollCourse?.completedChapters?.length || 0;
+        const total = targetCourse?.courseContent?.length || noOfChapters || 1;
+        return Math.min(100, Math.round((completed / total) * 100));
+    };
 
     useEffect(() => {
         setImgSrc(targetCourse?.bannerImageUrl || DEFAULT_BANNER);
@@ -43,9 +44,9 @@ function EnrollCourseCard({ course, enrollCourse }) {
                 <h2 className="flex justify-between text-sm mt-3 text-primary">Progress <span>{calculateProgress()}%</span></h2>
                 <Progress value={calculateProgress()} className="mt-3" />
 
-
-                <Link href={'/workspace/couse/' + course?.cid}>
-                    <Button className={'w-full mt-3'}><PlayCircle /> Continue Learning</Button></Link>
+                <Link href={'/workspace/view-course/' + (targetCourse?.cid || '')}>
+                    <Button className={'w-full mt-3'}><PlayCircle /> Continue Learning</Button>
+                </Link>
             </div>
         </div>
     );

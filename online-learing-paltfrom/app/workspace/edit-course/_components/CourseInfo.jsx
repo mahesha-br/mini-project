@@ -1,5 +1,5 @@
 "use client"
-import { Book, Clock, TrendingUp, Loader2 } from "lucide-react";
+import { Book, Clock, TrendingUp, Loader2, PlayCircle } from "lucide-react";
 import React, { useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import axios from "axios";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-function CourseInfo({ course, refreshData }) {
+function CourseInfo({ course, refreshData, ViewCourse }) {
     const courseLayout = course?.courseJson?.course;
     const courseName = courseLayout?.name || course?.name || 'Untitled Course';
     const description = courseLayout?.description || course?.description || '';
@@ -81,16 +81,18 @@ function CourseInfo({ course, refreshData }) {
                     </div>
                 </div>
 
-                <Button onClick={GenerateCourseContent} disabled={loadingContent}>
-                    {loadingContent ? (
-                        <span className="flex items-center gap-2">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Generating content...
-                        </span>
-                    ) : (
-                        "Generate content"
-                    )}
-                </Button>
+                {!ViewCourse ?
+                    <Button onClick={GenerateCourseContent} disabled={loadingContent}>
+                        {loadingContent ? (
+                            <span className="flex items-center gap-2">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Generating content...
+                            </span>
+                        ) : (
+                            "Generate content"
+                        )}
+                    </Button>
+                    : <Button> <PlayCircle />Continue Learning</Button>}
             </div>
 
             <div className="relative w-full md:w-[300px] lg:w-[380px] xl:w-[420px] h-[200px] sm:h-[240px] md:h-[260px] lg:h-[280px] shrink-0 rounded-xl overflow-hidden shadow-md border self-center md:self-stretch">
