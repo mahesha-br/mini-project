@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { Book } from "lucide-react";
+import { Book, PlayCircle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 const DEFAULT_BANNER = "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=80";
 
@@ -13,6 +16,11 @@ function EnrollCourseCard({ course, enrollCourse }) {
 
     const initialBanner = targetCourse?.bannerImageUrl || DEFAULT_BANNER;
     const [imgSrc, setImgSrc] = useState(initialBanner);
+
+    const calculateProgress = () => {
+        return (enrollCourse?.completedChapters?.length ?? 0 / course?.courseContent?.length) * 100;
+
+    }
 
     useEffect(() => {
         setImgSrc(targetCourse?.bannerImageUrl || DEFAULT_BANNER);
@@ -32,13 +40,12 @@ function EnrollCourseCard({ course, enrollCourse }) {
             <div className="p-3 flex-col gap-3">
                 <h2 className="font-bold text-lg">{courseName}</h2>
                 <p className="line-clamp-3 text-gray-400 text-sm">{courseDescription}</p>
-                {/* <div className="flex justify-between items-center p-3">
-                    {noOfChapters && (
-                        <h2 className="flex items-center text-sm gap-2">
-                            <Book className="text-primary h-5 w-5" />{noOfChapters} Chapters
-                        </h2>
-                    )}
-                </div> */}
+                <h2 className="flex justify-between text-sm mt-3 text-primary">Progress <span>{calculateProgress()}%</span></h2>
+                <Progress value={calculateProgress()} className="mt-3" />
+
+
+                <Link href={'/workspace/couse/' + course?.cid}>
+                    <Button className={'w-full mt-3'}><PlayCircle /> Continue Learning</Button></Link>
             </div>
         </div>
     );
