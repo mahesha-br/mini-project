@@ -28,5 +28,4 @@ export const enrollCourseTable = pgTable('enrollCourse', {
     cid: varchar('cid').references(() => coursestable.id),
     userEmail: varchar('userEmail').references(() => usersTable.email).notNull(),
     completedChapters: json()
-
 })
