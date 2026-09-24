@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Sparkles, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 function AddNewCourseDialog({ children }) {
     const { user } = useUser();
@@ -71,17 +72,27 @@ function AddNewCourseDialog({ children }) {
             const data = await response.json();
             console.log("Generated course result:", data);
 
+            if (data?.resp === 'limit reached') {
+                toast.error("Course creation limit reached! Upgrade your plan to create more courses.");
+                setLoading(false);
+                setOpen(false);
+                router.push('/workspace/billing');
+                return;
+            }
+
             if (response.ok && data?.result) {
                 const targetCourseId = data?.courseId || data?.result?.cid || courseId;
                 setLoading(false);
                 setOpen(false);
                 router.push('/workspace/edit-course/' + targetCourseId);
             } else {
-                console.error("Error storing course to database:", data?.error);
+                console.error("Error storing course to database:", data?.error || data);
+                toast.error("Failed to generate course layout");
                 setLoading(false);
             }
         } catch (error) {
             console.error("Error generating course layout:", error);
+            toast.error("Something went wrong");
             setLoading(false);
         }
     }

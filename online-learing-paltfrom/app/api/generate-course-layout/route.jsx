@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/config/db";
 import { coursestable, usersTable } from "@/config/schema";
 import { eq } from "drizzle-orm";
+import { auth, currentUser } from "@clerk/nextjs/server";
 
 export const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY,
@@ -62,6 +63,19 @@ const CURATED_BANNERS = {
 export async function POST(req) {
     try {
         const formData = await req.json();
+
+        const { has } = await auth();
+        const user = await currentUser();
+        const userEmail = user?.primaryEmailAddress?.emailAddress || formData?.userEmail;
+
+        const hasPremiumAccess = has ? has({ plan: 'starter' }) : false;
+
+        if (!hasPremiumAccess && userEmail) {
+            const result = await db.select().from(coursestable).where(eq(coursestable.userEmail, userEmail));
+            if (result?.length >= 1) {
+                return NextResponse.json({ 'resp': 'limit reached' });
+            }
+        }
 
         const config = {
             responseMimeType: 'application/json',
@@ -134,6 +148,8 @@ export async function POST(req) {
                 }
             }
         }
+
+
 
         const dbResult = await db.insert(coursestable).values({
             cid: courseId,
