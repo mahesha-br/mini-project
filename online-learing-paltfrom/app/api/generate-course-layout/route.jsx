@@ -161,18 +161,18 @@ export async function POST(req) {
         const courseId = formData?.courseId || crypto.randomUUID();
 
         let validUserEmail = null;
-        if (formData?.userEmail) {
-            const existingUser = await db.select().from(usersTable).where(eq(usersTable.email, formData.userEmail));
+        if (userEmail) {
+            const existingUser = await db.select().from(usersTable).where(eq(usersTable.email, userEmail));
             if (existingUser?.length > 0) {
-                validUserEmail = formData.userEmail;
+                validUserEmail = userEmail;
             } else {
                 try {
-                    const userName = formData.userEmail.split('@')[0] || "User";
+                    const userName = userEmail.split('@')[0] || "User";
                     await db.insert(usersTable).values({
                         name: userName,
-                        email: formData.userEmail
+                        email: userEmail
                     }).returning();
-                    validUserEmail = formData.userEmail;
+                    validUserEmail = userEmail;
                 } catch (userErr) {
                     console.error("Error creating user entry in DB:", userErr);
                     validUserEmail = null;

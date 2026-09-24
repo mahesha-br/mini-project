@@ -80,8 +80,8 @@ function AddNewCourseDialog({ children }) {
                 return;
             }
 
-            if (response.ok && data?.result) {
-                const targetCourseId = data?.courseId || data?.result?.cid || courseId;
+            const targetCourseId = data?.courseId || data?.result?.cid || courseId;
+            if (response.ok && targetCourseId) {
                 setLoading(false);
                 setOpen(false);
                 router.push('/workspace/edit-course/' + targetCourseId);
