@@ -83,10 +83,8 @@ export async function POST(req) {
         const contents = PROMPT + JSON.stringify(formData);
 
         const modelsToTry = [
-            'gemini-2.5-flash',
-            'gemini-2.0-flash',
             'gemini-1.5-flash',
-            'gemini-2.5-pro',
+            'gemini-2.0-flash',
             'gemini-1.5-pro'
         ];
         let response = null;
@@ -106,7 +104,7 @@ export async function POST(req) {
                 } catch (err) {
                     console.warn(`Gemini model ${modelName} attempt ${attempt + 1} error:`, err?.message || err);
                     lastError = err;
-                    await new Promise(r => setTimeout(r, 1000));
+                    await new Promise(r => setTimeout(r, 500));
                 }
             }
             if (response?.text) {
@@ -114,18 +112,42 @@ export async function POST(req) {
             }
         }
 
-        if (!response?.text) {
-            throw lastError || new Error("All Gemini model attempts failed. Please try again.");
-        }
-
         let courseLayoutJson = {};
-        try {
-            courseLayoutJson = JSON.parse(response.text);
-        } catch {
-            courseLayoutJson = response.text;
+        if (response?.text) {
+            try {
+                courseLayoutJson = JSON.parse(response.text);
+            } catch {
+                courseLayoutJson = response.text;
+            }
         }
 
+        const courseTitle = formData?.name || "New Course";
         const userDescription = formData?.description?.trim() ? formData.description.trim() : '';
+
+        if (!courseLayoutJson?.course) {
+            console.warn("Gemini API overloaded or unavailable; generating fallback course structure.");
+            const numChaps = Math.max(1, Number(formData?.noOfChapters || 3));
+            courseLayoutJson = {
+                course: {
+                    name: courseTitle,
+                    description: userDescription || `Comprehensive learning course covering ${courseTitle} key concepts and practical applications.`,
+                    category: formData?.category || "General",
+                    level: formData?.level || "beginner",
+                    includeVideo: Boolean(formData?.includeVideo),
+                    noOfChapters: numChaps,
+                    chapters: Array.from({ length: numChaps }, (_, i) => ({
+                        chapterName: `Chapter ${i + 1}: Fundamentals of ${courseTitle}`,
+                        duration: "45 mins",
+                        topics: [
+                            `Introduction to ${courseTitle} - Key Concepts`,
+                            `Core Principles & Practical Applications`,
+                            `Best Practices and Summary`
+                        ]
+                    }))
+                }
+            };
+        }
+
         const aiDescription = courseLayoutJson?.course?.description?.trim() ? courseLayoutJson.course.description.trim() : '';
         const finalDescription = userDescription || aiDescription || '';
 
@@ -133,8 +155,8 @@ export async function POST(req) {
             courseLayoutJson.course.description = finalDescription;
         }
 
-        const courseTitle = courseLayoutJson?.course?.name || formData?.name || "Course";
-        const bannerImageUrl = await GenerateBannerImage(courseTitle, finalDescription);
+        const finalCourseTitle = courseLayoutJson?.course?.name || courseTitle;
+        const bannerImageUrl = await GenerateBannerImage(finalCourseTitle, finalDescription);
 
         const courseId = formData?.courseId || crypto.randomUUID();
 

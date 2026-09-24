@@ -43,7 +43,7 @@ export async function POST(req) {
         const prompt = `Based on the course title "${courseName || 'Course'}" and description "${description || ''}", respond with ONLY 2 comma-separated keywords describing the topic.`;
 
         let category = 'general';
-        const modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+        const modelsToTry = ['gemini-3.5-flash', 'gemini-3.0-flash', 'gemini-2.5-flash'];
         let response = null;
         for (const modelName of modelsToTry) {
             try {
