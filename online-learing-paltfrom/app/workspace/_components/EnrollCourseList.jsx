@@ -1,3 +1,4 @@
+"use client";
 import axios from "axios";
 import { index } from "drizzle-orm/pg-core";
 import React, { useEffect, useState } from "react";

@@ -1,3 +1,4 @@
+"use client";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
 import { Book, LoaderCircle, PlayCircle, Settings } from "lucide-react";
