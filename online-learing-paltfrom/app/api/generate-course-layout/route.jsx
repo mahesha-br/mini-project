@@ -83,25 +83,34 @@ export async function POST(req) {
         const contents = PROMPT + JSON.stringify(formData);
 
         const modelsToTry = [
-            'gemini-3.6-flash',
-            'gemini-3.5-flash'
+            'gemini-2.5-flash',
+            'gemini-2.0-flash',
+            'gemini-1.5-flash',
+            'gemini-2.5-pro',
+            'gemini-1.5-pro'
         ];
         let response = null;
         let lastError = null;
 
         for (const modelName of modelsToTry) {
-            try {
-                response = await ai.models.generateContent({
-                    model: modelName,
-                    config,
-                    contents,
-                });
-                if (response?.text) {
-                    break;
+            for (let attempt = 0; attempt < 2; attempt++) {
+                try {
+                    response = await ai.models.generateContent({
+                        model: modelName,
+                        config,
+                        contents,
+                    });
+                    if (response?.text) {
+                        break;
+                    }
+                } catch (err) {
+                    console.warn(`Gemini model ${modelName} attempt ${attempt + 1} error:`, err?.message || err);
+                    lastError = err;
+                    await new Promise(r => setTimeout(r, 1000));
                 }
-            } catch (err) {
-                console.warn(`Gemini model ${modelName} attempt error:`, err?.message || err);
-                lastError = err;
+            }
+            if (response?.text) {
+                break;
             }
         }
 
@@ -182,10 +191,19 @@ export const GenerateBannerImage = async (courseName, description) => {
     try {
         const prompt = `Based on the course title "${courseName || 'Course'}" and description "${description || ''}", respond with ONLY 2 comma-separated keywords describing the subject (e.g. "programming, code" or "design, art").`;
 
-        const response = await ai.models.generateContent({
-            model: 'gemini-3.6-flash',
-            contents: prompt,
-        });
+        const modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+        let response = null;
+        for (const modelName of modelsToTry) {
+            try {
+                response = await ai.models.generateContent({
+                    model: modelName,
+                    contents: prompt,
+                });
+                if (response?.text) break;
+            } catch (err) {
+                console.warn(`Banner model ${modelName} error:`, err?.message || err);
+            }
+        }
 
         const text = (response?.text || "").toLowerCase();
         let category = 'general';

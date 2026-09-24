@@ -43,23 +43,28 @@ export async function POST(req) {
         const prompt = `Based on the course title "${courseName || 'Course'}" and description "${description || ''}", respond with ONLY 2 comma-separated keywords describing the topic.`;
 
         let category = 'general';
-        try {
-            const response = await ai.models.generateContent({
-                model: 'gemini-3.6-flash',
-                contents: prompt,
-            });
-            const text = (response?.text || "").toLowerCase();
-            if (text.includes('code') || text.includes('program') || text.includes('python') || text.includes('react') || text.includes('web') || text.includes('tech') || text.includes('dev')) {
-                category = 'code';
-            } else if (text.includes('design') || text.includes('art') || text.includes('ui') || text.includes('ux') || text.includes('graphic')) {
-                category = 'design';
-            } else if (text.includes('data') || text.includes('ai') || text.includes('science') || text.includes('machine')) {
-                category = 'data';
-            } else if (text.includes('business') || text.includes('finance') || text.includes('market') || text.includes('management')) {
-                category = 'business';
+        const modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+        let response = null;
+        for (const modelName of modelsToTry) {
+            try {
+                response = await ai.models.generateContent({
+                    model: modelName,
+                    contents: prompt,
+                });
+                if (response?.text) break;
+            } catch (err) {
+                console.warn(`Banner API model ${modelName} error:`, err?.message || err);
             }
-        } catch (err) {
-            console.warn("Gemini category detection error:", err);
+        }
+        const text = (response?.text || "").toLowerCase();
+        if (text.includes('code') || text.includes('program') || text.includes('python') || text.includes('react') || text.includes('web') || text.includes('tech') || text.includes('dev')) {
+            category = 'code';
+        } else if (text.includes('design') || text.includes('art') || text.includes('ui') || text.includes('ux') || text.includes('graphic')) {
+            category = 'design';
+        } else if (text.includes('data') || text.includes('ai') || text.includes('science') || text.includes('machine')) {
+            category = 'data';
+        } else if (text.includes('business') || text.includes('finance') || text.includes('market') || text.includes('management')) {
+            category = 'business';
         }
 
         const list = CURATED_BANNERS[category] || CURATED_BANNERS.general;

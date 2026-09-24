@@ -46,22 +46,28 @@ export async function POST(req) {
                 const contents = PROMPT + JSON.stringify(inputData);
                 let JSONResp = null;
 
-                try {
-                    const response = await ai.models.generateContent({
-                        model: 'gemini-3.6-flash',
-                        config,
-                        contents,
-                    });
-
-                    if (response?.text) {
-                        try {
-                            JSONResp = JSON.parse(response.text);
-                        } catch (parseErr) {
-                            console.warn(`JSON parse error for chapter ${chapterTitle}:`, parseErr);
-                        }
+                const modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-pro'];
+                let response = null;
+                for (const modelName of modelsToTry) {
+                    try {
+                        response = await ai.models.generateContent({
+                            model: modelName,
+                            config,
+                            contents,
+                        });
+                        if (response?.text) break;
+                    } catch (err) {
+                        console.warn(`Gemini error for model ${modelName} on chapter ${chapterTitle}:`, err?.message || err);
+                        await new Promise(r => setTimeout(r, 1000));
                     }
-                } catch (err) {
-                    console.warn(`Gemini error for chapter ${chapterTitle}:`, err?.message || err);
+                }
+
+                if (response?.text) {
+                    try {
+                        JSONResp = JSON.parse(response.text);
+                    } catch (parseErr) {
+                        console.warn(`JSON parse error for chapter ${chapterTitle}:`, parseErr);
+                    }
                 }
 
                 if (!JSONResp) {
