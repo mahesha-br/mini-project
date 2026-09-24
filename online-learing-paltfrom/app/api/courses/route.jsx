@@ -1,7 +1,7 @@
 import { db } from "@/config/db";
 import { coursestable } from "@/config/schema";
 import { currentUser } from "@clerk/nextjs/server";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 export async function GET(req) {
@@ -9,6 +9,14 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const courseId = searchParams?.get('courseId');
     const user = await currentUser();
+    if (courseId == 0) {
+        const result = await db.select().from(coursestable)
+            .where(sql`${coursestable.courseContent}::jsonb!='{}'::jsonb`)
+            .orderBy(desc(coursestable.id));
+
+        console.log(result);
+        return NextResponse.json(result);
+    }
 
     if (courseId) {
         const result = await db.select().from(coursestable)
