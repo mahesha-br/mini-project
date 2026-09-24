@@ -60,15 +60,26 @@ const CURATED_BANNERS = {
     ]
 };
 
+export const maxDuration = 60;
+
 export async function POST(req) {
     try {
         const formData = await req.json();
 
-        const { has } = await auth();
-        const user = await currentUser();
-        const userEmail = user?.primaryEmailAddress?.emailAddress || formData?.userEmail;
-
-        const hasPremiumAccess = has ? has({ plan: 'starter' }) : false;
+        let userEmail = formData?.userEmail || null;
+        let hasPremiumAccess = false;
+        try {
+            const { has } = await auth();
+            const user = await currentUser();
+            if (user?.primaryEmailAddress?.emailAddress) {
+                userEmail = user.primaryEmailAddress.emailAddress;
+            }
+            if (has) {
+                hasPremiumAccess = has({ plan: 'starter' });
+            }
+        } catch (authErr) {
+            console.warn("Clerk auth check warning in API:", authErr?.message || authErr);
+        }
 
         if (!hasPremiumAccess && userEmail) {
             const result = await db.select().from(coursestable).where(eq(coursestable.userEmail, userEmail));

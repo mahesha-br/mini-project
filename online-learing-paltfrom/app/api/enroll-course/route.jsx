@@ -4,6 +4,8 @@ import { currentUser } from "@clerk/nextjs/server";
 import { and, desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
+export const maxDuration = 60;
+
 export async function POST(req) {
     const { courseId } = await req.json();
     const user = await currentUser();

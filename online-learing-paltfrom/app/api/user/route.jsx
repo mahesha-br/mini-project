@@ -3,6 +3,8 @@ import { usersTable } from "@/config/schema";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
+export const maxDuration = 60;
+
 export async function POST(req) {
     try {
         const { email, name } = await req.json();

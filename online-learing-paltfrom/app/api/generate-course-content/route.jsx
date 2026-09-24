@@ -18,6 +18,8 @@ Schema:
 }
 :User Input:`;
 
+export const maxDuration = 60;
+
 export async function POST(req) {
     try {
         const { course, courseTitle, courseId } = await req.json();
