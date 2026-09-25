@@ -1,22 +1,33 @@
 "use client";
 import axios from "axios";
-import { index } from "drizzle-orm/pg-core";
 import React, { useEffect, useState } from "react";
 import EnrollCourseCard from "./EnrollCourseCard";
+import { EnrollCourseListSkeleton } from "@/components/loading/course-skeletons";
 
 function EnrollCourseList() {
 
-    const [enrolledcoursedList, setEnrolledCourseList] = useState();
+    const [enrolledcoursedList, setEnrolledCourseList] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         GetEnrolledCourse();
-    }, [])
+    }, []);
 
     const GetEnrolledCourse = async () => {
-        const result = await axios.get('/api/enroll-course');
-        console.log(result);
-        setEnrolledCourseList(result.data);
+        setLoading(true);
+        try {
+            const result = await axios.get('/api/enroll-course');
+            setEnrolledCourseList(result.data || []);
+        } catch (error) {
+            console.error("Error fetching enrolled courses:", error);
+            setEnrolledCourseList([]);
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    if (loading) {
+        return <EnrollCourseListSkeleton />;
     }
 
     return enrolledcoursedList?.length > 0 && (

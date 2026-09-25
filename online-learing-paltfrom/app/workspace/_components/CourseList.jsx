@@ -6,23 +6,42 @@ import AddNewCourseDialog from "./AddNewCourseDialog";
 import axios from "axios";
 import { useUser } from "@clerk/nextjs";
 import CourseCard from "./CourseCard";
+import { CourseCardGridSkeleton } from "@/components/loading/course-skeletons";
 
 function CourseList() {
     const [courseList, setCourseList] = useState([]);
-    const { user } = useUser();
+    const [loading, setLoading] = useState(true);
+    const { user, isLoaded } = useUser();
 
     useEffect(() => {
-        user && GetCourseList();
-    }, [user])
+        if (!isLoaded) return;
+        if (!user) {
+            setLoading(false);
+            return;
+        }
+        GetCourseList();
+    }, [user, isLoaded]);
+
     const GetCourseList = async () => {
-        const result = await axios.get('/api/courses');
-        console.log(result.data);
-        setCourseList(result.data)
-    }
+        setLoading(true);
+        try {
+            const result = await axios.get('/api/courses');
+            setCourseList(result.data);
+        } catch (error) {
+            console.error("Error fetching courses:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const showSkeleton = !isLoaded || loading;
+
     return (
         <div className="mt-10">
             <h2 className="font-bold text-xl">My Course List</h2>
-            {courseList?.length == 0 ?
+            {showSkeleton ? (
+                <CourseCardGridSkeleton count={3} className="mt-2" />
+            ) : courseList?.length == 0 ?
 
                 <div className="flex p-7 items-center justify-center flex-col border rounded-lx shadow-sm mt-2 bg-secondary">
                     <Image src={'/ai_learning_logo_only.svg'} alt='edu' width={80} height={80} />

@@ -1,14 +1,15 @@
 import { Button } from "@/components/ui/button";
 import { SelectedChapterIndexContent } from "@/context/SelectedChapterIndexContent";
 import axios from "axios";
-import { CheckCircle, PlayCircle } from "lucide-react";
+import { CheckCircle, Loader2, PlayCircle } from "lucide-react";
 import { useParams } from "next/navigation";
-import React, { useContext } from "react";
+import React, { useContext, useState } from "react";
 import YouTube from 'react-youtube';
 import { toast } from "sonner";
 
 function ChapterContent({ courseInfo, refreshData }) {
     const { courseId } = useParams();
+    const [markingComplete, setMarkingComplete] = useState(false);
     const course = courseInfo?.courses;
     const enrollCourse = courseInfo?.enrollCourse;
     const courseContent = course?.courseContent;
@@ -29,13 +30,20 @@ function ChapterContent({ courseInfo, refreshData }) {
 
         if (!completedChapters.includes(selectedChapterIndex)) {
             completedChapters.push(selectedChapterIndex);
-            const result = await axios.put('/api/enroll-course', {
-                courseId: courseId,
-                completedChapters: completedChapters
-            });
-            console.log("Updated completed chapters:", result.data);
-            refreshData && refreshData();
-            toast.success('Chapter Marked as Completed!');
+            setMarkingComplete(true);
+            try {
+                await axios.put('/api/enroll-course', {
+                    courseId: courseId,
+                    completedChapters: completedChapters
+                });
+                refreshData && refreshData();
+                toast.success('Chapter Marked as Completed!');
+            } catch (error) {
+                console.error("Error marking chapter complete:", error);
+                toast.error('Could not update progress. Try again.');
+            } finally {
+                setMarkingComplete(false);
+            }
         } else {
             toast.info('Chapter already marked as completed!');
         }
@@ -47,8 +55,13 @@ function ChapterContent({ courseInfo, refreshData }) {
         <div className="p-10">
             <div className="flex justify-between items-center">
                 <h2 className="font-bold text-2xl">{selectedChapterIndex + 1}. {chapterName}</h2>
-                <Button onClick={() => markChapterCompleted()} disabled={isCompleted}>
-                    <CheckCircle /> {isCompleted ? 'Completed' : 'Mark as completed'}
+                <Button onClick={() => markChapterCompleted()} disabled={isCompleted || markingComplete}>
+                    {markingComplete ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                        <CheckCircle />
+                    )}
+                    {isCompleted ? 'Completed' : markingComplete ? 'Saving...' : 'Mark as completed'}
                 </Button>
             </div>
             <h2 className="my-2 font-bold text-lg flex gap-2">Related Videos<PlayCircle /></h2>

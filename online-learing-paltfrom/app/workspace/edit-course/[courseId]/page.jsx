@@ -3,8 +3,8 @@ import { useParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import CourseInfo from "../_components/CourseInfo";
-import { Loader2 } from "lucide-react";
 import ChapterTopicList from "../_components/ChapterTopicList";
+import { EditCoursePageSkeleton } from "@/components/loading/course-skeletons";
 
 function EditCourse({ ViewCourse = false }) {
     const { courseId } = useParams();
@@ -30,11 +30,14 @@ function EditCourse({ ViewCourse = false }) {
     }
 
     if (loading) {
+        return <EditCoursePageSkeleton />;
+    }
+
+    if (!course) {
         return (
-            <div className="flex items-center justify-center min-h-[300px] flex-col gap-3">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-muted-foreground text-sm">Loading course details...</p>
-            </div>
+            <p className="p-5 text-center text-muted-foreground text-sm">
+                Could not load this course. It may have been removed or you do not have access.
+            </p>
         );
     }
 
