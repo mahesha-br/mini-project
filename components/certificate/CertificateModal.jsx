@@ -18,9 +18,11 @@ export default function CertificateModal({
     course,
     recipientName = "Student Name",
     completionDate = null,
+    score = null,
 }) {
     const courseData = course?.courses || course?.course || course;
     const courseTitle = courseData?.courseJson?.course?.name || courseData?.name || "Completed Course";
+    const overallScore = score || course?.eligibility?.overallScore;
 
     const [customName, setCustomName] = useState("");
     const [isEditingName, setIsEditingName] = useState(false);
@@ -41,7 +43,7 @@ export default function CertificateModal({
                                     <Sparkles className="w-4 h-4 text-amber-500" />
                                 </DialogTitle>
                                 <DialogDescription className="text-xs text-muted-foreground">
-                                    Issued for achieving 100% completion in {courseTitle}
+                                    Issued for passing all curriculum requirements {overallScore ? `with an overall score of ${overallScore}% (>= 75% required)` : ""} in {courseTitle}
                                 </DialogDescription>
                             </div>
                         </div>
@@ -86,6 +88,7 @@ export default function CertificateModal({
                         recipientName={displayName || recipientName}
                         courseName={courseTitle}
                         completionDate={completionDate}
+                        score={overallScore}
                         showActions={true}
                     />
                 </div>

@@ -63,8 +63,8 @@ export async function GET(req) {
 }
 
 export async function PUT(req) {
-    const { completedChapters, completedChapter, completedChapetr, courseId } = await req.json();
-    const chaptersToSave = completedChapters || completedChapter || completedChapetr || [];
+    const body = await req.json();
+    const { completedChapters, completedChapter, completedChapetr, courseId, videoProgress, quizScores } = body;
     const user = await currentUser();
     const userEmail = user?.primaryEmailAddress?.emailAddress;
 
@@ -72,9 +72,42 @@ export async function PUT(req) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const result = await db.update(enrollCourseTable).set({
-        completedChapters: chaptersToSave
-    }).where(and(
+    if (!courseId) {
+        return NextResponse.json({ error: "Missing courseId" }, { status: 400 });
+    }
+
+    const existing = await db.select().from(enrollCourseTable)
+        .where(and(
+            eq(enrollCourseTable.cid, courseId),
+            eq(enrollCourseTable.userEmail, userEmail)
+        ));
+
+    if (!existing || existing.length === 0) {
+        return NextResponse.json({ error: "Enrollment not found" }, { status: 404 });
+    }
+
+    const currentRecord = existing[0];
+    const updateData = {};
+
+    if (completedChapters !== undefined || completedChapter !== undefined || completedChapetr !== undefined) {
+        updateData.completedChapters = completedChapters ?? completedChapter ?? completedChapetr ?? [];
+    }
+
+    if (videoProgress !== undefined) {
+        const prevVideo = (currentRecord.videoProgress && typeof currentRecord.videoProgress === 'object') ? currentRecord.videoProgress : {};
+        updateData.videoProgress = (typeof videoProgress === 'object' && !Array.isArray(videoProgress))
+            ? { ...prevVideo, ...videoProgress }
+            : videoProgress;
+    }
+
+    if (quizScores !== undefined) {
+        const prevScores = (currentRecord.quizScores && typeof currentRecord.quizScores === 'object') ? currentRecord.quizScores : {};
+        updateData.quizScores = (typeof quizScores === 'object' && !Array.isArray(quizScores))
+            ? { ...prevScores, ...quizScores }
+            : quizScores;
+    }
+
+    const result = await db.update(enrollCourseTable).set(updateData).where(and(
         eq(enrollCourseTable.cid, courseId),
         eq(enrollCourseTable.userEmail, userEmail)
     )).returning(enrollCourseTable);

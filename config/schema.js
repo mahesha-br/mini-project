@@ -27,5 +27,7 @@ export const enrollCourseTable = pgTable('enrollCourse', {
     id: integer().primaryKey().generatedAlwaysAsIdentity(),
     cid: varchar('cid').references(() => coursestable.id),
     userEmail: varchar('userEmail').references(() => usersTable.email).notNull(),
-    completedChapters: json()
+    completedChapters: json(),
+    videoProgress: json().$default(() => ({})),
+    quizScores: json().$default(() => ({}))
 })

@@ -48,6 +48,7 @@ export default function CertificateView({
     courseName = "Course Name",
     completionDate = null,
     certificateId = null,
+    score = null,
     instructorName = "Aaron Loeb",
     instructorTitle = "Training Coordinator",
     showActions = true,
@@ -257,11 +258,21 @@ export default function CertificateView({
 
             ctx.fillStyle = "#0284C7";
             ctx.font = "bold 44px 'Montserrat', sans-serif";
-            ctx.fillText(courseName || "Course Name", width / 2, 985);
+            ctx.fillText(courseName || "Course Name", width / 2, 980);
 
-            ctx.fillStyle = "#475569";
-            ctx.font = "32px 'Montserrat', sans-serif";
-            ctx.fillText(`on ${formattedDate}`, width / 2, 1050);
+            if (score) {
+                ctx.fillStyle = "#047857";
+                ctx.font = "bold 26px 'Montserrat', sans-serif";
+                ctx.fillText(`Verified Assessment Score: ${score}% (Minimum 75% Criteria Met)`, width / 2, 1025);
+
+                ctx.fillStyle = "#475569";
+                ctx.font = "30px 'Montserrat', sans-serif";
+                ctx.fillText(`on ${formattedDate}`, width / 2, 1070);
+            } else {
+                ctx.fillStyle = "#475569";
+                ctx.font = "32px 'Montserrat', sans-serif";
+                ctx.fillText(`on ${formattedDate}`, width / 2, 1050);
+            }
 
             // 10. Seal
             const sealX = width / 2;
@@ -494,6 +505,13 @@ export default function CertificateView({
                         <h4 className="text-base md:text-xl lg:text-2xl font-bold text-[#0284C7] mt-0.5">
                             {courseName || "Course Name"}
                         </h4>
+
+                        {score && (
+                            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 text-[10px] md:text-xs font-semibold mt-1.5 shadow-2xs">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Verified Score: {score}% &bull; Minimum 75% Criteria Met</span>
+                            </div>
+                        )}
 
                         <p className="text-slate-500 text-xs md:text-sm font-medium mt-1">
                             on {formattedDate}

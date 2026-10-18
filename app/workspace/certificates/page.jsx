@@ -2,13 +2,19 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useUser } from "@clerk/nextjs";
-import { Award, BookOpen, CheckCircle, Clock, ExternalLink, GraduationCap, PlayCircle, Sparkles } from "lucide-react";
+import { Award, BookOpen, CheckCircle, CheckCircle2, Clock, ExternalLink, GraduationCap, HelpCircle, Lock, PlayCircle, Sparkles, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import Image from "next/image";
 import CertificateModal from "@/components/certificate/CertificateModal";
+import CertificateEligibilityModal from "@/components/certificate/CertificateEligibilityModal";
 import { formatCertificateDate, generateCertificateId } from "@/components/certificate/CertificateView";
+import {
+    evaluateCertificateEligibility,
+    extractAllTopics,
+    MIN_VIDEO_WATCH_SECONDS
+} from "@/lib/certificateEligibility";
 import { toast } from "sonner";
 
 const DEFAULT_BANNER = "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop&q=80";
@@ -18,6 +24,7 @@ export default function CertificatesPage() {
     const [enrolledCourses, setEnrolledCourses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedCourseForModal, setSelectedCourseForModal] = useState(null);
+    const [selectedCourseForChecklist, setSelectedCourseForChecklist] = useState(null);
     const [completingDemoCourseId, setCompletingDemoCourseId] = useState(null);
 
     const recipientName = user?.fullName || user?.firstName || user?.username || "Student Name";
@@ -55,20 +62,37 @@ export default function CertificatesPage() {
         };
     }, []);
 
-    // Fast-complete helper for testing / demonstration of 100% completion
+    // Fast-complete helper for testing / demonstration of 100% completion & all criteria
     const handleFastComplete = async (item) => {
         const course = item?.courses || item?.course || item;
         const cid = course?.cid;
         const total = course?.courseContent?.length || course?.noOfChapters || course?.courseJson?.course?.chapters?.length || 1;
-        const allChapters = Array.from({ length: total }, (_, i) => i);
+        const mockQuizScores = {};
+        for (let i = 0; i < total; i++) {
+            mockQuizScores[`chapter_${i}`] = {
+                score: 3,
+                total: 3,
+                percentage: 100,
+                passed: true,
+                completedAt: new Date().toISOString()
+            };
+        }
+
+        const demoVideoProgress = {
+            watchedSeconds: { demo_video: MIN_VIDEO_WATCH_SECONDS },
+            maxWatchedSeconds: MIN_VIDEO_WATCH_SECONDS,
+            videoRequirementMet: true,
+        };
 
         setCompletingDemoCourseId(cid);
         try {
             await axios.put('/api/enroll-course', {
                 courseId: cid,
-                completedChapters: allChapters
+                completedChapters: allChapters,
+                videoProgress: demoVideoProgress,
+                quizScores: mockQuizScores,
             });
-            toast.success("🎉 Congratulations! Course completed 100%. Certificate unlocked!");
+            toast.success("🎉 All criteria met (2min video, topic quizzes 100%). Certificate unlocked!");
             await fetchEnrolledCourses();
         } catch (err) {
             console.error("Error completing course:", err);
@@ -78,23 +102,18 @@ export default function CertificatesPage() {
         }
     };
 
-    // Calculate completion metrics
+    // Calculate completion metrics using unified eligibility helper
     const categorizedCourses = enrolledCourses.map((item) => {
         const course = item?.courses || item?.course || item;
         const enrollCourse = item?.enrollCourse;
-        const completedCount = enrollCourse?.completedChapters?.length || 0;
-        const totalCount = course?.courseContent?.length || course?.noOfChapters || course?.courseJson?.course?.chapters?.length || 1;
-        const progress = Math.min(100, Math.round((completedCount / totalCount) * 100));
-        const isCompleted = progress >= 100;
+        const eligibility = evaluateCertificateEligibility(course, enrollCourse);
 
         return {
             ...item,
             course,
             enrollCourse,
-            completedCount,
-            totalCount,
-            progress,
-            isCompleted
+            eligibility,
+            isCompleted: eligibility.isEligible
         };
     });
 
@@ -104,7 +123,7 @@ export default function CertificatesPage() {
     return (
         <div className="p-5 md:p-8 max-w-7xl mx-auto space-y-8">
             {/* Header Banner */}
-            <div className="relative overflow-hidden rounded-2xl bg-gray-700 text-white p-6 md:p-8 shadow-lg border border-gray-600">
+            <div className="relative overflow-hidden rounded-2xl bg-gray-800 text-white p-6 md:p-8 shadow-lg border border-gray-700">
                 <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                     <div className="space-y-2 max-w-2xl">
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-gray-200 text-xs font-semibold tracking-wider uppercase">
@@ -115,7 +134,7 @@ export default function CertificatesPage() {
                             Certificates of Completion
                         </h1>
                         <p className="text-gray-300 text-sm md:text-base leading-relaxed">
-                            Earn recognized certificates by completing 100% of your enrolled courses. Each certificate is dynamically generated with your verified name, course title, and completion date.
+                            To unlock an official certificate, complete all chapters, watch at least one video for 2 minutes, and score at least 75% across all topic quizzes.
                         </p>
                     </div>
 
@@ -132,7 +151,7 @@ export default function CertificatesPage() {
                 </div>
             </div>
 
-            {/* Section 1: Earned Certificates (100% Complete) */}
+            {/* Section 1: Earned Certificates (All 4 Criteria Met) */}
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -141,7 +160,7 @@ export default function CertificatesPage() {
                         </div>
                         <div>
                             <h2 className="text-xl md:text-2xl font-bold tracking-tight">Earned Certificates</h2>
-                            <p className="text-xs md:text-sm text-muted-foreground">Courses you have completed 100%</p>
+                            <p className="text-xs md:text-sm text-muted-foreground">Courses where you achieved all certificate requirements (min 75% score & 2 min video)</p>
                         </div>
                     </div>
                 </div>
@@ -158,6 +177,7 @@ export default function CertificatesPage() {
                             const course = item.course;
                             const courseName = course?.courseJson?.course?.name || course?.name || "Untitled Course";
                             const certId = generateCertificateId(course?.cid, recipientName);
+                            const overallScore = item.eligibility.overallScore;
 
                             return (
                                 <div
@@ -166,9 +186,9 @@ export default function CertificatesPage() {
                                 >
                                     {/* Gold Certificate Badge */}
                                     <div className="flex items-start justify-between gap-3 mb-3">
-                                        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
+                                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
                                             <Award className="w-3.5 h-3.5 text-amber-500" />
-                                            <span>100% Completed</span>
+                                            <span>Score: {overallScore}% (Passed)</span>
                                         </div>
                                         <span className="text-[11px] font-mono text-muted-foreground">{certId}</span>
                                     </div>
@@ -207,7 +227,7 @@ export default function CertificatesPage() {
                                     <div className="flex items-center gap-2 pt-2 border-t">
                                         <Button
                                             onClick={() => setSelectedCourseForModal(item)}
-                                            className="w-full bg-gray-700 text-white text-xs gap-1.5 cursor-pointer"
+                                            className="w-full bg-amber-600 hover:bg-amber-700 text-white text-xs gap-1.5 cursor-pointer"
                                         >
                                             <Award className="w-3.5 h-3.5" />
                                             <span>View Certificate</span>
@@ -224,13 +244,13 @@ export default function CertificatesPage() {
                         </div>
                         <h3 className="font-bold text-base mb-1">No Certificates Earned Yet</h3>
                         <p className="text-sm text-muted-foreground max-w-md mx-auto mb-4">
-                            Complete 100% of any enrolled course below to unlock your verified Certificate of Completion!
+                            Complete all chapters, watch at least 1 video for 2 minutes, and score at least 75% on all topic quizzes to unlock your certificate.
                         </p>
                     </div>
                 )}
             </div>
 
-            {/* Section 2: In-Progress Courses (< 100%) */}
+            {/* Section 2: In-Progress Courses */}
             <div className="space-y-4 pt-4">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -239,7 +259,7 @@ export default function CertificatesPage() {
                         </div>
                         <div>
                             <h2 className="text-xl md:text-2xl font-bold tracking-tight">Courses In Progress</h2>
-                            <p className="text-xs md:text-sm text-muted-foreground">Complete remaining chapters to unlock your certificate</p>
+                            <p className="text-xs md:text-sm text-muted-foreground">Complete remaining criteria to unlock your official certificate</p>
                         </div>
                     </div>
                 </div>
@@ -250,6 +270,7 @@ export default function CertificatesPage() {
                             const course = item.course;
                             const courseName = course?.courseJson?.course?.name || course?.name || "Untitled Course";
                             const banner = course?.bannerImageUrl || DEFAULT_BANNER;
+                            const eligibility = item.eligibility;
 
                             return (
                                 <div
@@ -266,34 +287,58 @@ export default function CertificatesPage() {
                                                 className="object-cover"
                                             />
                                             <div className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-black/70 text-white text-[10px] font-bold">
-                                                {item.progress}%
+                                                {eligibility.checklist.filter(c => c.isCompleted).length}/4 Criteria
                                             </div>
                                         </div>
 
                                         <div>
                                             <h3 className="font-bold text-base line-clamp-1">{courseName}</h3>
                                             <p className="text-xs text-muted-foreground mt-0.5">
-                                                {item.completedCount} of {item.totalCount} chapters completed
+                                                {eligibility.chaptersCompletedCount} of {eligibility.totalChapters} chapters completed
                                             </p>
                                         </div>
 
-                                        {/* Progress Bar */}
-                                        <div className="space-y-1">
-                                            <Progress value={item.progress} className="h-2" />
-                                            <p className="text-[11px] text-amber-600 font-medium">
-                                                {100 - item.progress}% remaining to unlock certificate
-                                            </p>
+                                        {/* Criteria Mini Pills */}
+                                        <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+                                            <div className={`p-1.5 rounded-md border flex items-center gap-1.5 ${eligibility.isChaptersCompleted ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20" : "bg-muted text-muted-foreground"}`}>
+                                                {eligibility.isChaptersCompleted ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <Clock className="w-3 h-3" />}
+                                                <span>Chapters: {eligibility.chaptersCompletedCount}/{eligibility.totalChapters}</span>
+                                            </div>
+
+                                            <div className={`p-1.5 rounded-md border flex items-center gap-1.5 ${eligibility.isVideoRequirementMet ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20" : "bg-muted text-muted-foreground"}`}>
+                                                {eligibility.isVideoRequirementMet ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <Video className="w-3 h-3" />}
+                                                <span>Video: {eligibility.isVideoRequirementMet ? "2m ✓" : `${Math.floor(eligibility.maxWatchedSeconds / 60)}m ${eligibility.maxWatchedSeconds % 60}s`}</span>
+                                            </div>
+
+                                            <div className={`p-1.5 rounded-md border flex items-center gap-1.5 ${eligibility.isAllChaptersAttended ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20" : "bg-muted text-muted-foreground"}`}>
+                                                {eligibility.isAllChaptersAttended ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <HelpCircle className="w-3 h-3" />}
+                                                <span>Quizzes: {eligibility.attendedChaptersCount}/{eligibility.totalChapters}</span>
+                                            </div>
+
+                                            <div className={`p-1.5 rounded-md border flex items-center gap-1.5 ${eligibility.isScorePassed ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20" : "bg-muted text-muted-foreground"}`}>
+                                                {eligibility.isScorePassed ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <Award className="w-3 h-3" />}
+                                                <span>Score: {eligibility.overallScore}% / 75%</span>
+                                            </div>
                                         </div>
                                     </div>
 
                                     {/* Action links */}
                                     <div className="pt-2 border-t flex flex-col gap-2">
-                                        <Link href={`/course/${course?.cid}`} className="w-full">
-                                            <Button variant="default" size="sm" className="w-full gap-1.5 cursor-pointer">
-                                                <PlayCircle className="w-4 h-4" />
-                                                <span>Continue Learning</span>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setSelectedCourseForChecklist(item)}
+                                                className="flex-1 text-xs gap-1"
+                                            >
+                                                <Lock className="w-3 h-3" /> Requirements
                                             </Button>
-                                        </Link>
+                                            <Link href={`/course/${course?.cid}`} className="flex-1">
+                                                <Button variant="default" size="sm" className="w-full gap-1 text-xs cursor-pointer">
+                                                    <PlayCircle className="w-3 h-3" /> Continue
+                                                </Button>
+                                            </Link>
+                                        </div>
 
                                         {/* Quick Test Demo Button */}
                                         <Button
@@ -304,7 +349,7 @@ export default function CertificatesPage() {
                                             className="w-full text-[11px] text-muted-foreground hover:text-foreground h-7"
                                         >
                                             <Sparkles className="w-3 h-3 mr-1 text-amber-500" />
-                                            {completingDemoCourseId === course?.cid ? "Completing..." : "Complete 100% (Instant Demo)"}
+                                            {completingDemoCourseId === course?.cid ? "Completing..." : "Pass All (Instant Demo)"}
                                         </Button>
                                     </div>
                                 </div>
@@ -322,6 +367,24 @@ export default function CertificatesPage() {
                     </div>
                 ) : null}
             </div>
+
+            {/* Checklist Modal */}
+            {selectedCourseForChecklist && (
+                <CertificateEligibilityModal
+                    isOpen={!!selectedCourseForChecklist}
+                    onClose={() => setSelectedCourseForChecklist(null)}
+                    eligibility={selectedCourseForChecklist.eligibility}
+                    courseTitle={selectedCourseForChecklist.course?.name}
+                    onOpenCertificate={() => {
+                        setSelectedCourseForModal(selectedCourseForChecklist);
+                        setSelectedCourseForChecklist(null);
+                    }}
+                    onFastCompleteDemo={() => {
+                        handleFastComplete(selectedCourseForChecklist);
+                        setSelectedCourseForChecklist(null);
+                    }}
+                />
+            )}
 
             {/* Certificate Modal Preview */}
             {selectedCourseForModal && (
