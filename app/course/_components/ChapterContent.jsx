@@ -1,15 +1,19 @@
 import { Button } from "@/components/ui/button";
 import { SelectedChapterIndexContent } from "@/context/SelectedChapterIndexContent";
 import axios from "axios";
-import { CheckCircle, Loader2, PlayCircle } from "lucide-react";
+import { Award, CheckCircle, Loader2, PlayCircle, Sparkles } from "lucide-react";
 import { useParams } from "next/navigation";
 import React, { useContext, useState } from "react";
 import YouTube from 'react-youtube';
 import { toast } from "sonner";
+import { useUser } from "@clerk/nextjs";
+import CertificateModal from "@/components/certificate/CertificateModal";
 
 function ChapterContent({ courseInfo, refreshData }) {
+    const { user } = useUser();
     const { courseId } = useParams();
     const [markingComplete, setMarkingComplete] = useState(false);
+    const [showCertModal, setShowCertModal] = useState(false);
     const course = courseInfo?.courses;
     const enrollCourse = courseInfo?.enrollCourse;
     const courseContent = course?.courseContent;
@@ -22,6 +26,11 @@ function ChapterContent({ courseInfo, refreshData }) {
     const videoData = currentContent?.youtubeVideo || currentChapter?.youtubeVideo;
     const topics = currentContent?.content?.topics || currentContent?.courseData?.topics || currentContent?.topics || currentChapter?.topics;
     const chapterName = currentContent?.content?.chapterName || currentContent?.chapterName || currentChapter?.chapterName || currentChapter?.title;
+
+    const totalChapters = courseContent?.length || chapters?.length || course?.noOfChapters || 1;
+    const completedList = (enrollCourse?.completedChapters || enrollCourse?.completedChapter || []);
+    const isAllCompleted = completedList?.length >= totalChapters;
+    const recipientName = user?.fullName || user?.firstName || user?.username || "Student Name";
 
     const markChapterCompleted = async () => {
         let completedChapters = Array.isArray(enrollCourse?.completedChapters)
@@ -36,8 +45,22 @@ function ChapterContent({ courseInfo, refreshData }) {
                     courseId: courseId,
                     completedChapters: completedChapters
                 });
-                refreshData && refreshData();
-                toast.success('Chapter Marked as Completed!');
+                if (refreshData) {
+                    refreshData();
+                }
+
+                if (completedChapters.length >= totalChapters) {
+                    toast.success('🎉 Congratulations! You have completed 100% of this course! Your Certificate is ready!', {
+                        action: {
+                            label: 'View Certificate',
+                            onClick: () => setShowCertModal(true)
+                        },
+                        duration: 8000
+                    });
+                    setShowCertModal(true);
+                } else {
+                    toast.success('Chapter Marked as Completed!');
+                }
             } catch (error) {
                 console.error("Error marking chapter complete:", error);
                 toast.error('Could not update progress. Try again.');
@@ -49,10 +72,36 @@ function ChapterContent({ courseInfo, refreshData }) {
         }
     };
 
-    const isCompleted = (enrollCourse?.completedChapters || enrollCourse?.completedChapter || [])?.includes(selectedChapterIndex);
+    const isCompleted = completedList?.includes(selectedChapterIndex);
 
     return (
-        <div className="p-10">
+        <div className="p-6 md:p-10 space-y-6">
+            {/* 100% Completed Celebration Ribbon */}
+            {isAllCompleted && (
+                <div className="rounded-xl bg-gradient-to-r from-amber-500/15 via-emerald-500/15 to-blue-500/15 border border-amber-500/30 p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-full bg-amber-500 text-white shadow-md">
+                            <Award className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-base flex items-center gap-1.5">
+                                <span>Course 100% Completed!</span>
+                                <Sparkles className="w-4 h-4 text-amber-500" />
+                            </h3>
+                            <p className="text-xs text-muted-foreground">
+                                Your official Certificate of Completion has been generated and is ready to view or download.
+                            </p>
+                        </div>
+                    </div>
+                    <Button
+                        onClick={() => setShowCertModal(true)}
+                        className="bg-amber-600 hover:bg-amber-700 text-white font-semibold gap-1.5 text-xs shrink-0 cursor-pointer"
+                    >
+                        <Award className="w-4 h-4" /> View My Certificate
+                    </Button>
+                </div>
+            )}
+
             <div className="flex justify-between items-center">
                 <h2 className="font-bold text-2xl">{selectedChapterIndex + 1}. {chapterName}</h2>
                 <Button onClick={() => markChapterCompleted()} disabled={isCompleted || markingComplete}>
@@ -106,6 +155,15 @@ function ChapterContent({ courseInfo, refreshData }) {
 
             </div>
 
+            {showCertModal && (
+                <CertificateModal
+                    isOpen={showCertModal}
+                    onClose={() => setShowCertModal(false)}
+                    course={course}
+                    recipientName={recipientName}
+                    completionDate={new Date()}
+                />
+            )}
         </div>
     )
 }

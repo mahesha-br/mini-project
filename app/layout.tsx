@@ -1,7 +1,7 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import { shadcn } from "@clerk/ui/themes";
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Noto_Sans, Playfair_Display } from "next/font/google";
+import { Geist, Geist_Mono, Noto_Sans, Playfair_Display, Great_Vibes, Montserrat } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
 import "./globals.css";
@@ -12,6 +12,10 @@ import { Toaster } from "@/components/ui/toaster";
 const playfairDisplayHeading = Playfair_Display({ subsets: ['latin'], variable: '--font-heading' });
 
 const notoSans = Noto_Sans({ subsets: ['latin'], variable: '--font-sans' });
+
+const greatVibes = Great_Vibes({ weight: '400', subsets: ['latin'], variable: '--font-script' });
+
+const montserrat = Montserrat({ subsets: ['latin'], variable: '--font-montserrat' });
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -78,7 +82,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <ClerkProvider appearance={{ theme: shadcn }}>
       <html
         lang="en"
-        className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", notoSans.variable, playfairDisplayHeading.variable)}
+        className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", notoSans.variable, playfairDisplayHeading.variable, greatVibes.variable, montserrat.variable)}
       >
         <body className="min-h-full flex flex-col">
           <Provider>
