@@ -25,7 +25,8 @@ import ChapterQuiz from "@/components/quiz/ChapterQuiz";
 import {
     evaluateCertificateEligibility,
     MIN_PASSING_PERCENTAGE,
-    MIN_VIDEO_WATCH_SECONDS
+    MIN_VIDEO_WATCH_SECONDS,
+    MIN_VIDEO_WATCH_PERCENTAGE
 } from "@/lib/certificateEligibility";
 import { Progress } from "@/components/ui/progress";
 
@@ -54,10 +55,20 @@ function ChapterContent({ courseInfo, refreshData }) {
     const completedList = (enrollCourse?.completedChapters || enrollCourse?.completedChapter || []);
     const recipientName = user?.fullName || user?.firstName || user?.username || "Student Name";
 
-    // Video watch tracking state
+    // Video watch tracking state (seconds, durations, percentages, per-chapter records)
     const [videoWatchSeconds, setVideoWatchSeconds] = useState(() => {
         return enrollCourse?.videoProgress?.watchedSeconds || {};
     });
+    const [videoDurations, setVideoDurations] = useState(() => {
+        return enrollCourse?.videoProgress?.durations || {};
+    });
+    const [videoPercentages, setVideoPercentages] = useState(() => {
+        return enrollCourse?.videoProgress?.percentages || {};
+    });
+    const [chapterVideos, setChapterVideos] = useState(() => {
+        return enrollCourse?.videoProgress?.chapterVideos || {};
+    });
+
     const intervalRef = useRef({});
     const lastSavedSecondsRef = useRef({});
 
@@ -68,11 +79,31 @@ function ChapterContent({ courseInfo, refreshData }) {
 
     // Synchronize local states when courseInfo updates
     useEffect(() => {
-        if (enrollCourse?.videoProgress?.watchedSeconds) {
-            setVideoWatchSeconds((prev) => ({
-                ...prev,
-                ...enrollCourse.videoProgress.watchedSeconds,
-            }));
+        if (enrollCourse?.videoProgress) {
+            if (enrollCourse.videoProgress.watchedSeconds) {
+                setVideoWatchSeconds((prev) => ({
+                    ...prev,
+                    ...enrollCourse.videoProgress.watchedSeconds,
+                }));
+            }
+            if (enrollCourse.videoProgress.durations) {
+                setVideoDurations((prev) => ({
+                    ...prev,
+                    ...enrollCourse.videoProgress.durations,
+                }));
+            }
+            if (enrollCourse.videoProgress.percentages) {
+                setVideoPercentages((prev) => ({
+                    ...prev,
+                    ...enrollCourse.videoProgress.percentages,
+                }));
+            }
+            if (enrollCourse.videoProgress.chapterVideos) {
+                setChapterVideos((prev) => ({
+                    ...prev,
+                    ...enrollCourse.videoProgress.chapterVideos,
+                }));
+            }
         }
         if (enrollCourse?.quizScores) {
             setQuizScores(enrollCourse.quizScores);
@@ -92,16 +123,9 @@ function ChapterContent({ courseInfo, refreshData }) {
         videoProgress: {
             ...(enrollCourse?.videoProgress || {}),
             watchedSeconds: videoWatchSeconds,
-            maxWatchedSeconds: Math.max(
-                0,
-                ...Object.values(videoWatchSeconds).filter(v => typeof v === 'number'),
-                enrollCourse?.videoProgress?.maxWatchedSeconds || 0
-            ),
-            videoRequirementMet: Math.max(
-                0,
-                ...Object.values(videoWatchSeconds).filter(v => typeof v === 'number'),
-                enrollCourse?.videoProgress?.maxWatchedSeconds || 0
-            ) >= MIN_VIDEO_WATCH_SECONDS
+            durations: videoDurations,
+            percentages: videoPercentages,
+            chapterVideos: chapterVideos,
         },
         quizScores: quizScores,
     };
@@ -109,21 +133,26 @@ function ChapterContent({ courseInfo, refreshData }) {
     const eligibility = evaluateCertificateEligibility(course, mergedEnrollCourse);
 
     // Save video progress to backend
-    const saveVideoProgressToBackend = async (vId, seconds) => {
-        const updatedWatched = {
-            ...videoWatchSeconds,
-            [vId]: seconds,
-        };
-        const maxSecs = Math.max(0, ...Object.values(updatedWatched).filter(v => typeof v === 'number'));
-        const requirementMet = maxSecs >= MIN_VIDEO_WATCH_SECONDS;
+    const saveVideoProgressToBackend = async (vId, seconds, duration, pct) => {
+        const chapterKey = `chapter_${selectedChapterIndex}`;
+        const isMet = pct >= MIN_VIDEO_WATCH_PERCENTAGE;
 
         try {
             await axios.put('/api/enroll-course', {
                 courseId: courseId,
                 videoProgress: {
                     watchedSeconds: { [vId]: seconds },
-                    maxWatchedSeconds: maxSecs,
-                    videoRequirementMet: requirementMet,
+                    durations: duration > 0 ? { [vId]: duration } : {},
+                    percentages: { [vId]: pct },
+                    chapterVideos: {
+                        [chapterKey]: {
+                            videoId: vId,
+                            watchedSeconds: seconds,
+                            duration: duration,
+                            percentage: pct,
+                            isCompleted: isMet,
+                        }
+                    }
                 }
             });
         } catch (err) {
@@ -132,25 +161,52 @@ function ChapterContent({ courseInfo, refreshData }) {
     };
 
     // Video progress update handler
-    const updateVideoProgress = (videoId, currentSecs, forceSave = false) => {
+    const updateVideoProgress = (videoId, currentSecs, totalDuration, forceSave = false) => {
+        const duration = totalDuration > 0 ? totalDuration : (videoDurations[videoId] || 0);
+        const chapterKey = `chapter_${selectedChapterIndex}`;
+
+        if (duration > 0 && (!videoDurations[videoId] || videoDurations[videoId] !== duration)) {
+            setVideoDurations(prev => ({ ...prev, [videoId]: duration }));
+        }
+
         setVideoWatchSeconds((prev) => {
             const previousSecs = prev[videoId] || 0;
             if (currentSecs <= previousSecs && !forceSave) return prev;
 
             const nextSecs = Math.max(previousSecs, currentSecs);
+            const calculatedPct = duration > 0 ? Math.min(100, Math.round((nextSecs / duration) * 100)) : 0;
+            const previousPct = videoPercentages[videoId] || 0;
+            const nextPct = Math.max(previousPct, calculatedPct);
 
-            // Notify student when 2-minute milestone is reached
-            if (previousSecs < MIN_VIDEO_WATCH_SECONDS && nextSecs >= MIN_VIDEO_WATCH_SECONDS) {
-                toast.success('🎉 2-Minute Video Requirement Completed! (Watched >= 2:00 mins)', {
+            const wasMet = previousPct >= MIN_VIDEO_WATCH_PERCENTAGE;
+            const isMet = nextPct >= MIN_VIDEO_WATCH_PERCENTAGE;
+
+            if (nextPct !== previousPct) {
+                setVideoPercentages(p => ({ ...p, [videoId]: nextPct }));
+                setChapterVideos(p => ({
+                    ...p,
+                    [chapterKey]: {
+                        videoId,
+                        watchedSeconds: nextSecs,
+                        duration,
+                        percentage: nextPct,
+                        isCompleted: isMet,
+                    }
+                }));
+            }
+
+            // Notify student when 70% milestone is reached for this chapter video
+            if (!wasMet && isMet) {
+                toast.success(`🎉 Chapter Video Requirement Met! (${nextPct}% watched - >= 70% completed)`, {
                     duration: 5000,
                 });
             }
 
-            // Debounced save every 10 seconds or on forceSave (pause/end)
+            // Debounced save every 10 seconds, on milestone reached, or on forceSave (pause/end)
             const lastSaved = lastSavedSecondsRef.current[videoId] || 0;
-            if (forceSave || nextSecs - lastSaved >= 10 || (previousSecs < MIN_VIDEO_WATCH_SECONDS && nextSecs >= MIN_VIDEO_WATCH_SECONDS)) {
+            if (forceSave || (!wasMet && isMet) || (nextSecs - lastSaved >= 10)) {
                 lastSavedSecondsRef.current[videoId] = nextSecs;
-                saveVideoProgressToBackend(videoId, nextSecs);
+                saveVideoProgressToBackend(videoId, nextSecs, duration, nextPct);
             }
 
             return {
@@ -160,29 +216,54 @@ function ChapterContent({ courseInfo, refreshData }) {
         });
     };
 
+    // YouTube player ready
+    const onPlayerReady = (videoId, event) => {
+        if (event?.target && typeof event.target.getDuration === 'function') {
+            const d = Math.floor(event.target.getDuration());
+            if (d > 0) {
+                setVideoDurations(prev => ({ ...prev, [videoId]: d }));
+            }
+        }
+    };
+
     // YouTube state changes
     const onPlayerStateChange = (videoId, event) => {
         if (!event?.target) return;
+
+        const getPlayerStats = () => {
+            const current = typeof event.target.getCurrentTime === 'function'
+                ? Math.floor(event.target.getCurrentTime())
+                : 0;
+            const duration = typeof event.target.getDuration === 'function'
+                ? Math.floor(event.target.getDuration())
+                : (videoDurations[videoId] || 0);
+            return { current, duration };
+        };
 
         // 1 = PLAYING
         if (event.data === 1) {
             if (intervalRef.current[videoId]) clearInterval(intervalRef.current[videoId]);
             intervalRef.current[videoId] = setInterval(() => {
-                if (event.target && typeof event.target.getCurrentTime === 'function') {
-                    const secs = Math.floor(event.target.getCurrentTime());
-                    updateVideoProgress(videoId, secs, false);
-                }
+                const { current, duration } = getPlayerStats();
+                updateVideoProgress(videoId, current, duration, false);
             }, 1000);
-        } else {
-            // PAUSED (2), ENDED (0), or BUFFERING
+        } else if (event.data === 0) {
+            // ENDED -> 100% completed
             if (intervalRef.current[videoId]) {
                 clearInterval(intervalRef.current[videoId]);
                 delete intervalRef.current[videoId];
             }
-            if (typeof event.target.getCurrentTime === 'function') {
-                const secs = Math.floor(event.target.getCurrentTime());
-                updateVideoProgress(videoId, secs, true);
+            const { duration } = getPlayerStats();
+            const total = duration > 0 ? duration : 100;
+            updateVideoProgress(videoId, total, total, true);
+        } else {
+            // PAUSED (2), BUFFERING, etc.
+            if (intervalRef.current[videoId]) {
+                clearInterval(intervalRef.current[videoId]);
+                delete intervalRef.current[videoId];
             }
+            const { current, duration } = getPlayerStats();
+            updateVideoProgress(videoId, current, duration, true);
         }
     };
 
@@ -276,40 +357,61 @@ function ChapterContent({ courseInfo, refreshData }) {
 
     // Quick demo complete to test certificate unlock
     const handleFastCompleteDemo = async () => {
-        const allChapters = Array.from({ length: totalChapters }, (_, i) => i);
+        const allChaptersList = Array.from({ length: totalChapters }, (_, i) => i);
         const mockQuizScores = {};
+        const mockChapterVideos = {};
+        const mockPercentages = {};
+        const mockWatched = {};
+        const mockDurations = {};
+
         for (let i = 0; i < totalChapters; i++) {
-            mockQuizScores[`chapter_${i}`] = {
+            const chKey = `chapter_${i}`;
+            mockQuizScores[chKey] = {
                 score: 3,
                 total: 3,
                 percentage: 100,
                 passed: true,
                 completedAt: new Date().toISOString()
             };
+            mockChapterVideos[chKey] = {
+                videoId: `demo_video_${i}`,
+                watchedSeconds: 100,
+                duration: 100,
+                percentage: 100,
+                isCompleted: true,
+            };
+            mockPercentages[`demo_video_${i}`] = 100;
+            mockWatched[`demo_video_${i}`] = 100;
+            mockDurations[`demo_video_${i}`] = 100;
         }
 
         const demoVideoProgress = {
-            watchedSeconds: { demo_video: MIN_VIDEO_WATCH_SECONDS },
-            maxWatchedSeconds: MIN_VIDEO_WATCH_SECONDS,
+            watchedSeconds: mockWatched,
+            durations: mockDurations,
+            percentages: mockPercentages,
+            chapterVideos: mockChapterVideos,
             videoRequirementMet: true,
         };
 
         try {
             await axios.put('/api/enroll-course', {
                 courseId: courseId,
-                completedChapters: allChapters,
+                completedChapters: allChaptersList,
                 videoProgress: demoVideoProgress,
                 quizScores: mockQuizScores,
             });
 
             setVideoWatchSeconds(demoVideoProgress.watchedSeconds);
+            setVideoDurations(demoVideoProgress.durations);
+            setVideoPercentages(demoVideoProgress.percentages);
+            setChapterVideos(demoVideoProgress.chapterVideos);
             setQuizScores(mockQuizScores);
 
             if (refreshData) refreshData();
 
             setShowEligibilityModal(false);
             setShowCertModal(true);
-            toast.success("🎉 Demo Complete! All 4 criteria satisfied (100% combined score). Certificate unlocked!");
+            toast.success("🎉 Demo Complete! All 4 criteria satisfied (100% chapters, 70%+ videos, 100% quiz). Certificate unlocked!");
         } catch (err) {
             console.error("Fast complete demo failed:", err);
             toast.error("Fast complete failed. Try again.");
@@ -317,6 +419,25 @@ function ChapterContent({ courseInfo, refreshData }) {
     };
 
     const isCompleted = completedList?.includes(selectedChapterIndex);
+
+    const formatTime = (secs) => {
+        if (!secs || isNaN(secs) || secs < 0) return "0:00";
+        const m = Math.floor(secs / 60);
+        const s = Math.floor(secs % 60);
+        return `${m}:${s.toString().padStart(2, "0")}`;
+    };
+
+    const isCurrentChapterVideoMet = (() => {
+        const currentDetails = eligibility.chapterVideoDetails?.find(
+            d => d.chapterIndex === selectedChapterIndex
+        );
+        if (currentDetails) return currentDetails.isCompleted;
+        if (!videoData || videoData.length === 0) return true;
+        return videoData.some(v => {
+            const vId = v?.videoId || v?.id?.videoId;
+            return (videoPercentages[vId] || 0) >= MIN_VIDEO_WATCH_PERCENTAGE;
+        });
+    })();
 
     return (
         <div className="p-6 md:p-10 space-y-6">
@@ -354,8 +475,8 @@ function ChapterContent({ courseInfo, refreshData }) {
                             </div>
                             <p className="text-xs text-muted-foreground mt-0.5">
                                 {eligibility.isEligible
-                                    ? `Congratulations! You watched >= 2 min video and scored ${eligibility.overallScore}% combined across all chapters (>= 75% required).`
-                                    : "Watch at least 1 video for 2 minutes and score min 75% combined across all chapter quizzes to earn your certificate."
+                                    ? `Congratulations! You watched >= 70% of each chapter's video and scored ${eligibility.overallScore}% combined across all chapters (>= 75% required).`
+                                    : "Watch at least 70% of each chapter's video and score min 75% combined across all chapter quizzes to earn your certificate."
                                 }
                             </p>
 
@@ -374,7 +495,7 @@ function ChapterContent({ courseInfo, refreshData }) {
                                     : "bg-muted text-muted-foreground border-border"
                                     }`}>
                                     {eligibility.isVideoRequirementMet ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <Video className="w-3 h-3" />}
-                                    Video: {eligibility.isVideoRequirementMet ? "2m Watched ✓" : `${Math.floor(eligibility.maxWatchedSeconds / 60)}m ${eligibility.maxWatchedSeconds % 60}s / 2m`}
+                                    Videos: {eligibility.isVideoRequirementMet ? "70% Watched ✓" : `${eligibility.videoChaptersCompletedCount}/${eligibility.totalChaptersWithVideos} Ch (70%)`}
                                 </span>
 
                                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border ${eligibility.isAllChaptersAttended
@@ -430,19 +551,19 @@ function ChapterContent({ courseInfo, refreshData }) {
                 </Button>
             </div>
 
-            {/* Related Videos with Live 2-Min Watch Tracking */}
+            {/* Related Videos with Live 70% Watch Tracking */}
             <div>
                 <div className="flex items-center justify-between mb-3">
                     <h3 className="font-bold text-lg flex items-center gap-2">
                         Related Videos <PlayCircle className="w-5 h-5 text-primary" />
                     </h3>
                     <span className="text-xs text-muted-foreground">
-                        {eligibility.isVideoRequirementMet ? (
+                        {isCurrentChapterVideoMet ? (
                             <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                                <CheckCircle2 className="w-3.5 h-3.5" /> 2-min requirement met!
+                                <CheckCircle2 className="w-3.5 h-3.5" /> Chapter video requirement met (70%+ watched)!
                             </span>
                         ) : (
-                            <span>Watch at least 1 video for 2:00 mins</span>
+                            <span>Watch at least 70% of this chapter's video</span>
                         )}
                     </span>
                 </div>
@@ -452,8 +573,10 @@ function ChapterContent({ courseInfo, refreshData }) {
                         if (index >= 4) return null;
                         const vId = video?.videoId || video?.id?.videoId;
                         const watched = videoWatchSeconds[vId] || 0;
-                        const isMet = watched >= MIN_VIDEO_WATCH_SECONDS;
-                        const progressPct = Math.min(100, Math.round((watched / MIN_VIDEO_WATCH_SECONDS) * 100));
+                        const duration = videoDurations[vId] || 0;
+                        const pct = videoPercentages[vId] || (duration > 0 ? Math.min(100, Math.round((watched / duration) * 100)) : 0);
+                        const isMet = pct >= MIN_VIDEO_WATCH_PERCENTAGE;
+                        const progressTowardGoal = Math.min(100, Math.round((pct / MIN_VIDEO_WATCH_PERCENTAGE) * 100));
 
                         return (
                             <div key={index} className="border rounded-xl bg-card overflow-hidden shadow-xs flex flex-col justify-between">
@@ -468,6 +591,7 @@ function ChapterContent({ courseInfo, refreshData }) {
                                             }
                                         }}
                                         className="w-full h-full"
+                                        onReady={(e) => onPlayerReady(vId, e)}
                                         onStateChange={(e) => onPlayerStateChange(vId, e)}
                                     />
                                 </div>
@@ -477,19 +601,21 @@ function ChapterContent({ courseInfo, refreshData }) {
                                     <div className="flex items-center justify-between text-xs">
                                         <span className="font-medium flex items-center gap-1.5">
                                             <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-                                            Watched: {Math.floor(watched / 60)}m {(watched % 60).toString().padStart(2, '0')}s / 2m 00s
+                                            <span>
+                                                Watched: {formatTime(watched)} {duration > 0 ? `/ ${formatTime(duration)}` : ''} ({pct}%)
+                                            </span>
                                         </span>
                                         {isMet ? (
                                             <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 text-[11px] bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                                                <CheckCircle2 className="w-3 h-3" /> Requirement Met
+                                                <CheckCircle2 className="w-3 h-3" /> 70% Watched (Met)
                                             </span>
                                         ) : (
                                             <span className="text-muted-foreground text-[11px]">
-                                                {MIN_VIDEO_WATCH_SECONDS - watched}s remaining
+                                                {pct}% / 70% required
                                             </span>
                                         )}
                                     </div>
-                                    <Progress value={progressPct} className="h-1.5" />
+                                    <Progress value={progressTowardGoal} className="h-1.5" />
                                 </div>
                             </div>
                         );

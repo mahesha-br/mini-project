@@ -95,9 +95,30 @@ export async function PUT(req) {
 
     if (videoProgress !== undefined) {
         const prevVideo = (currentRecord.videoProgress && typeof currentRecord.videoProgress === 'object') ? currentRecord.videoProgress : {};
-        updateData.videoProgress = (typeof videoProgress === 'object' && !Array.isArray(videoProgress))
-            ? { ...prevVideo, ...videoProgress }
-            : videoProgress;
+        if (typeof videoProgress === 'object' && !Array.isArray(videoProgress)) {
+            updateData.videoProgress = {
+                ...prevVideo,
+                ...videoProgress,
+                watchedSeconds: {
+                    ...(prevVideo.watchedSeconds || {}),
+                    ...(videoProgress.watchedSeconds || {}),
+                },
+                durations: {
+                    ...(prevVideo.durations || {}),
+                    ...(videoProgress.durations || {}),
+                },
+                percentages: {
+                    ...(prevVideo.percentages || {}),
+                    ...(videoProgress.percentages || {}),
+                },
+                chapterVideos: {
+                    ...(prevVideo.chapterVideos || {}),
+                    ...(videoProgress.chapterVideos || {}),
+                },
+            };
+        } else {
+            updateData.videoProgress = videoProgress;
+        }
     }
 
     if (quizScores !== undefined) {

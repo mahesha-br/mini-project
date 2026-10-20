@@ -13,6 +13,7 @@ import { formatCertificateDate, generateCertificateId } from "@/components/certi
 import {
     evaluateCertificateEligibility,
     extractAllTopics,
+    MIN_VIDEO_WATCH_PERCENTAGE,
     MIN_VIDEO_WATCH_SECONDS
 } from "@/lib/certificateEligibility";
 import { toast } from "sonner";
@@ -67,20 +68,39 @@ export default function CertificatesPage() {
         const course = item?.courses || item?.course || item;
         const cid = course?.cid;
         const total = course?.courseContent?.length || course?.noOfChapters || course?.courseJson?.course?.chapters?.length || 1;
+        const allChapters = Array.from({ length: total }, (_, i) => i);
         const mockQuizScores = {};
+        const mockChapterVideos = {};
+        const mockPercentages = {};
+        const mockWatched = {};
+        const mockDurations = {};
+
         for (let i = 0; i < total; i++) {
-            mockQuizScores[`chapter_${i}`] = {
+            const chKey = `chapter_${i}`;
+            mockQuizScores[chKey] = {
                 score: 3,
                 total: 3,
                 percentage: 100,
                 passed: true,
                 completedAt: new Date().toISOString()
             };
+            mockChapterVideos[chKey] = {
+                videoId: `demo_video_${i}`,
+                watchedSeconds: 100,
+                duration: 100,
+                percentage: 100,
+                isCompleted: true,
+            };
+            mockPercentages[`demo_video_${i}`] = 100;
+            mockWatched[`demo_video_${i}`] = 100;
+            mockDurations[`demo_video_${i}`] = 100;
         }
 
         const demoVideoProgress = {
-            watchedSeconds: { demo_video: MIN_VIDEO_WATCH_SECONDS },
-            maxWatchedSeconds: MIN_VIDEO_WATCH_SECONDS,
+            watchedSeconds: mockWatched,
+            durations: mockDurations,
+            percentages: mockPercentages,
+            chapterVideos: mockChapterVideos,
             videoRequirementMet: true,
         };
 
@@ -92,7 +112,7 @@ export default function CertificatesPage() {
                 videoProgress: demoVideoProgress,
                 quizScores: mockQuizScores,
             });
-            toast.success("🎉 All criteria met (2min video, topic quizzes 100%). Certificate unlocked!");
+            toast.success("🎉 All criteria met (70%+ video per chapter, quizzes 100%). Certificate unlocked!");
             await fetchEnrolledCourses();
         } catch (err) {
             console.error("Error completing course:", err);
@@ -123,7 +143,7 @@ export default function CertificatesPage() {
     return (
         <div className="p-5 md:p-8 max-w-7xl mx-auto space-y-8">
             {/* Header Banner */}
-            <div className="relative overflow-hidden rounded-2xl bg-gray-800 text-white p-6 md:p-8 shadow-lg border border-gray-700">
+            <div className="relative overflow-hidden rounded-2xl bg-gray-700 text-white p-6 md:p-8 shadow-lg border border-gray-600">
                 <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                     <div className="space-y-2 max-w-2xl">
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-gray-200 text-xs font-semibold tracking-wider uppercase">
@@ -134,7 +154,7 @@ export default function CertificatesPage() {
                             Certificates of Completion
                         </h1>
                         <p className="text-gray-300 text-sm md:text-base leading-relaxed">
-                            To unlock an official certificate, complete all chapters, watch at least one video for 2 minutes, and score at least 75% across all topic quizzes.
+                            To unlock an official certificate, complete all chapters, watch at least 70% of each chapter's video, and score at least 75% across all topic quizzes.
                         </p>
                     </div>
 
@@ -160,7 +180,7 @@ export default function CertificatesPage() {
                         </div>
                         <div>
                             <h2 className="text-xl md:text-2xl font-bold tracking-tight">Earned Certificates</h2>
-                            <p className="text-xs md:text-sm text-muted-foreground">Courses where you achieved all certificate requirements (min 75% score & 2 min video)</p>
+                            <p className="text-xs md:text-sm text-muted-foreground">Courses where you achieved all certificate requirements (min 75% score & 70% video watched per chapter)</p>
                         </div>
                     </div>
                 </div>
@@ -244,7 +264,7 @@ export default function CertificatesPage() {
                         </div>
                         <h3 className="font-bold text-base mb-1">No Certificates Earned Yet</h3>
                         <p className="text-sm text-muted-foreground max-w-md mx-auto mb-4">
-                            Complete all chapters, watch at least 1 video for 2 minutes, and score at least 75% on all topic quizzes to unlock your certificate.
+                            Complete all chapters, watch at least 70% of each chapter's video, and score at least 75% on all chapter quizzes to unlock your certificate.
                         </p>
                     </div>
                 )}
@@ -307,7 +327,7 @@ export default function CertificatesPage() {
 
                                             <div className={`p-1.5 rounded-md border flex items-center gap-1.5 ${eligibility.isVideoRequirementMet ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20" : "bg-muted text-muted-foreground"}`}>
                                                 {eligibility.isVideoRequirementMet ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <Video className="w-3 h-3" />}
-                                                <span>Video: {eligibility.isVideoRequirementMet ? "2m ✓" : `${Math.floor(eligibility.maxWatchedSeconds / 60)}m ${eligibility.maxWatchedSeconds % 60}s`}</span>
+                                                <span>Video: {eligibility.isVideoRequirementMet ? "70% ✓" : `${eligibility.videoChaptersCompletedCount}/${eligibility.totalChaptersWithVideos} Ch (70%)`}</span>
                                             </div>
 
                                             <div className={`p-1.5 rounded-md border flex items-center gap-1.5 ${eligibility.isAllChaptersAttended ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20" : "bg-muted text-muted-foreground"}`}>
