@@ -448,7 +448,7 @@ function ChapterContent({ courseInfo, refreshData }) {
                 }`}>
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                     <div className="flex items-start gap-3">
-                        <div className={`p-2.5 rounded-full ${eligibility.isEligible ? "bg-amber-500 text-white shadow-md" : "bg-muted text-muted-foreground"
+                        <div className={`p-2.5 rounded-full ${eligibility.isEligible ? "bg-amber-600 text-white shadow-md" : "bg-muted text-muted-foreground"
                             }`}>
                             {eligibility.isEligible ? <Award className="w-6 h-6" /> : <Lock className="w-6 h-6" />}
                         </div>
