@@ -481,7 +481,7 @@ function ChapterContent({ courseInfo, refreshData }) {
                             </p>
 
                             {/* 4 Quick Badges */}
-                            <div className="flex flex-wrap gap-2 mt-2.5 text-[11px]">
+                            <div className="flex flex-wrap gap-2 mt-2.5 text-[10px]">
                                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border ${eligibility.isChaptersCompleted
                                     ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20 font-medium"
                                     : "bg-muted text-muted-foreground border-border"
