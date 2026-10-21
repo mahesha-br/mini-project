@@ -529,7 +529,7 @@ function ChapterContent({ courseInfo, refreshData }) {
                         {eligibility.isEligible && (
                             <Button
                                 onClick={() => setShowCertModal(true)}
-                                className="bg-amber-600 hover:bg-amber-700 text-white font-semibold gap-1.5 text-xs shrink-0 cursor-pointer flex-1 md:flex-initial"
+                                className="bg-amber-700 hover:bg-amber-700 text-white font-semibold gap-1.5 text-xs shrink-0 cursor-pointer flex-1 md:flex-initial"
                             >
                                 <Award className="w-4 h-4" /> View My Certificate
                             </Button>
