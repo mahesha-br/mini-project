@@ -661,7 +661,7 @@ function ChapterContent({ courseInfo, refreshData }) {
                 <div className="mb-4">
                     <h3 className="font-bold text-xl flex items-center gap-2">
                         <span>Chapter Assessment & Quiz</span>
-                        <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                        <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-500 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
                             3 Questions
                         </span>
                     </h3>
