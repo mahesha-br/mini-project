@@ -165,7 +165,7 @@ export default function CertificatesPage() {
                         </div>
                         <div>
                             <span className="text-3xl font-black text-white">{completedCourses.length}</span>
-                            <p className="text-xs text-gray-300 font-medium">Earned Certificates</p>
+                            <p className="text-xs text-gray-400 font-medium">Earned Certificates</p>
                         </div>
                     </div>
                 </div>
