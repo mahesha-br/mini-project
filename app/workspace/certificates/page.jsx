@@ -336,7 +336,7 @@ export default function CertificatesPage() {
                                             </div>
 
                                             <div className={`p-1.5 rounded-md border flex items-center gap-1.5 ${eligibility.isScorePassed ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20" : "bg-muted text-muted-foreground"}`}>
-                                                {eligibility.isScorePassed ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <Award className="w-3 h-3" />}
+                                                {eligibility.isScorePassed ? <CheckCircle2 className="w-3 h-3 text-emerald-700" /> : <Award className="w-3 h-3" />}
                                                 <span>Score: {eligibility.overallScore}% / 75%</span>
                                             </div>
                                         </div>
