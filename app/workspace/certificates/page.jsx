@@ -143,7 +143,7 @@ export default function CertificatesPage() {
     return (
         <div className="p-5 md:p-8 max-w-7xl mx-auto space-y-8">
             {/* Header Banner */}
-            <div className="relative overflow-hidden rounded-2xl bg-gray-700 text-white p-6 md:p-8 shadow-lg border border-gray-600">
+            <div className="relative overflow-hidden rounded-2xl bg-gray-800 text-white p-6 md:p-8 shadow-lg border border-gray-600">
                 <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                     <div className="space-y-2 max-w-2xl">
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-gray-200 text-xs font-semibold tracking-wider uppercase">
