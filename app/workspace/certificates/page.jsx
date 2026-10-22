@@ -237,7 +237,7 @@ export default function CertificatesPage() {
                                         <span className="text-[10px] text-blue-600 font-script text-base">{recipientName}</span>
                                         <span className="text-[9px] text-muted-foreground truncate max-w-[200px]">{courseName}</span>
                                         <div className="absolute inset-0 bg-black/0 hover:bg-black/10 flex items-center justify-center transition-colors">
-                                            <span className="opacity-0 group-hover:opacity-100 bg-white/90 text-slate-800 text-xs font-semibold px-3 py-1 rounded-full shadow-xs transition-opacity flex items-center gap-1.5">
+                                            <span className="opacity-0 group-hover:opacity-100 bg-white/90 text-slate-700 text-xs font-semibold px-3 py-1 rounded-full shadow-xs transition-opacity flex items-center gap-1.5">
                                                 <ExternalLink className="w-3 h-3" /> Preview
                                             </span>
                                         </div>
