@@ -259,7 +259,7 @@ export default function CertificatesPage() {
                     </div>
                 ) : (
                     <div className="rounded-xl border border-dashed p-8 text-center bg-card/50">
-                        <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-700 flex items-center justify-center mx-auto mb-3">
+                        <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center mx-auto mb-3">
                             <Award className="w-6 h-6" />
                         </div>
                         <h3 className="font-bold text-base mb-1">No Certificates Earned Yet</h3>
