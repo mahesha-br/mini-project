@@ -247,7 +247,7 @@ export default function CertificatesPage() {
                                     <div className="flex items-center gap-2 pt-2 border-t">
                                         <Button
                                             onClick={() => setSelectedCourseForModal(item)}
-                                            className="w-full bg-amber-600 hover:bg-amber-700 text-white text-xs gap-1.5 cursor-pointer"
+                                            className="w-full bg-amber-700 hover:bg-amber-700 text-white text-xs gap-1.5 cursor-pointer"
                                         >
                                             <Award className="w-3.5 h-3.5" />
                                             <span>View Certificate</span>
