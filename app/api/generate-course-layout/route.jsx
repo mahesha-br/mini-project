@@ -9,28 +9,203 @@ export const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY,
 });
 
-const PROMPT = `Generate Learning Course based on the following details. In which Make sure to add Course Name, Description, Chapter Name, Topic under each chapter, Duration for each chapter etc, in JSON format only.
-Schema:
+const PROMPT = `You are an expert curriculum designer and educator.
+Generate a structured, high-quality learning course in strictly valid JSON format based on the details provided.
+
+MANDATORY RULES FOR CHAPTERS & TOPICS:
+1. Exact Number of Chapters: Generate exactly the requested number of chapters ("noOfChapters").
+2. EXACTLY 4 TOPICS PER CHAPTER: Every single chapter in the "chapters" array MUST have an array of EXACTLY 4 distinct topic titles (strings). Never 3, never 5, ALWAYS exactly 4 topics per chapter.
+3. DIFFERENT & PROGRESSIVE TOPICS ACCORDING TO CHAPTERS:
+   - Each chapter represents a distinct phase of learning in the course (e.g. Chapter 1 covers introductory fundamentals and setup; Chapter 2 covers core principles and architecture; Chapter 3 covers practical implementation and deep-dive techniques; Chapter 4+ covers advanced patterns, testing, performance, security, and capstone applications).
+   - The 4 topics within each chapter must be specifically tailored to that chapter's theme and focus.
+   - Topics must be completely DIFFERENT across chapters — no duplicate, repeated, or generic placeholder topics. Every chapter must explore 4 fresh, in-depth topics relevant to that stage of the course.
+   - Topics should be descriptive, clear, educational titles.
+
+JSON Schema to follow strictly:
 {
   "course": {
-    "name": "string",
-    "description": "string",
-    "category": "string",
-    "level": "string",
-    "includeVideo": "boolean",
-    "noOfChapters": "number",
+    "name": "Course Title",
+    "description": "Comprehensive course overview describing what the student will learn",
+    "category": "Category name",
+    "level": "beginner | moderate | advanced",
+    "includeVideo": boolean,
+    "noOfChapters": number,
     "chapters": [
       {
-        "chapterName": "string",
-        "duration": "string",
+        "chapterName": "Chapter 1: Descriptive Title Reflecting This Chapter's Specific Focus",
+        "duration": "45 mins",
         "topics": [
-          "string"
+          "Unique Chapter 1 Topic 1 Title",
+          "Unique Chapter 1 Topic 2 Title",
+          "Unique Chapter 1 Topic 3 Title",
+          "Unique Chapter 1 Topic 4 Title"
         ]
       }
     ]
   }
 }
-, User Input: `;
+User Input: `;
+
+const PROGRESSIVE_CHAPTER_THEMES = [
+    {
+        phase: "Foundations & Environment",
+        topics: [
+            (title) => `Core Concepts & Foundational Principles of ${title}`,
+            (title) => `Environment Setup, Tooling & Prerequisites`,
+            (title) => `Fundamental Syntax, Data Structures & Basic Workflows`,
+            (title) => `Hands-on Milestone: Your First Working Implementation`
+        ]
+    },
+    {
+        phase: "Core Architecture & Mechanics",
+        topics: [
+            (title) => `Architectural Patterns & Component Mechanics in ${title}`,
+            (title) => `State Management, Data Flow & Working with APIs`,
+            (title) => `Handling User Inputs, Validations & Edge Scenarios`,
+            (title) => `Practical Exercise: Building Interactive Core Features`
+        ]
+    },
+    {
+        phase: "Advanced Engineering & Scalability",
+        topics: [
+            (title) => `Modular Design, Code Organization & Reusability`,
+            (title) => `Asynchronous Operations, Concurrency & Stream Processing`,
+            (title) => `Integration with External Ecosystems & Third-Party Libraries`,
+            (title) => `End-to-End Implementation: Constructing a Full Module`
+        ]
+    },
+    {
+        phase: "Performance, Testing & Security",
+        topics: [
+            (title) => `Performance Profiling, Caching & Memory Optimization`,
+            (title) => `Defensive Engineering, Authentication & Security Standards`,
+            (title) => `Automated Unit, Integration & End-to-End Testing`,
+            (title) => `Production Readiness, CI/CD & Deployment Strategies`
+        ]
+    },
+    {
+        phase: "Ecosystem Mastery & Capstone",
+        topics: [
+            (title) => `Modern Ecosystem Trends & Next-Gen Tooling for ${title}`,
+            (title) => `Enterprise Design Systems & Microservice Architecture`,
+            (title) => `Troubleshooting Complex Scenarios & Incident Management`,
+            (title) => `Comprehensive Capstone Project & Real-World Portfolio Piece`
+        ]
+    }
+];
+
+function getStageTheme(index, courseTitle) {
+    const themeIndex = index % PROGRESSIVE_CHAPTER_THEMES.length;
+    const cycle = Math.floor(index / PROGRESSIVE_CHAPTER_THEMES.length);
+    const theme = PROGRESSIVE_CHAPTER_THEMES[themeIndex];
+    const prefix = cycle > 0 ? `Advanced Part ${cycle + 1}: ` : '';
+    const chapterName = `Chapter ${index + 1}: ${prefix}${theme.phase} in ${courseTitle}`;
+    const topics = theme.topics.map(tFn => tFn(courseTitle));
+    return { chapterName, topics };
+}
+
+function generateFallbackChapters(courseTitle, numChaps) {
+    const total = Math.max(1, Number(numChaps || 1));
+    const result = [];
+    for (let i = 0; i < total; i++) {
+        const stage = getStageTheme(i, courseTitle);
+        result.push({
+            chapterName: stage.chapterName,
+            duration: "45 mins",
+            topics: stage.topics
+        });
+    }
+    return result;
+}
+
+/**
+ * Normalizes chapters to ensure each chapter has exactly 4 distinct topics,
+ * tailored specifically to that chapter and non-repeating across chapters.
+ */
+function normalizeChaptersWithFourTopics(chapters, courseTitle, requestedCount = 1) {
+    const targetCount = Math.max(1, Number(requestedCount || 1));
+    let baseChapters = Array.isArray(chapters) && chapters.length > 0
+        ? [...chapters]
+        : generateFallbackChapters(courseTitle, targetCount);
+
+    // If fewer chapters than requested, supplement them
+    while (baseChapters.length < targetCount) {
+        const stage = getStageTheme(baseChapters.length, courseTitle);
+        baseChapters.push({
+            chapterName: stage.chapterName,
+            duration: "45 mins",
+            topics: stage.topics
+        });
+    }
+
+    // If more chapters than requested, slice to requested count
+    if (baseChapters.length > targetCount) {
+        baseChapters = baseChapters.slice(0, targetCount);
+    }
+
+    const seenTopicsAllChapters = new Set();
+
+    return baseChapters.map((chap, index) => {
+        const stage = getStageTheme(index, courseTitle);
+        const chapterName = chap?.chapterName?.trim() || stage.chapterName;
+        const duration = chap?.duration || "45 mins";
+
+        // Extract raw topics
+        const rawTopics = Array.isArray(chap?.topics)
+            ? chap.topics
+                .map(t => typeof t === 'string' ? t.trim() : (t?.topic || t?.name || '').trim())
+                .filter(Boolean)
+            : [];
+
+        // Deduplicate within chapter
+        const distinctTopics = [];
+        const seenInChapter = new Set();
+
+        for (const t of rawTopics) {
+            const lower = t.toLowerCase();
+            if (!seenInChapter.has(lower)) {
+                seenInChapter.add(lower);
+                distinctTopics.push(t);
+            }
+        }
+
+        // Keep top 4 if more than 4
+        let finalTopics = distinctTopics.slice(0, 4);
+
+        // Fill up to 4 if fewer than 4
+        if (finalTopics.length < 4) {
+            for (const fallbackTopic of stage.topics) {
+                if (finalTopics.length >= 4) break;
+                const lower = fallbackTopic.toLowerCase();
+                if (!seenInChapter.has(lower) && !seenTopicsAllChapters.has(lower)) {
+                    seenInChapter.add(lower);
+                    finalTopics.push(fallbackTopic);
+                }
+            }
+
+            let subCounter = 1;
+            while (finalTopics.length < 4) {
+                const generatedTopic = `${chapterName} - Key Focus ${subCounter}: Practical Applications & Analysis`;
+                const lower = generatedTopic.toLowerCase();
+                if (!seenInChapter.has(lower)) {
+                    seenInChapter.add(lower);
+                    finalTopics.push(generatedTopic);
+                }
+                subCounter++;
+            }
+        }
+
+        // Record topics to prevent duplicate across chapters
+        finalTopics.forEach(t => seenTopicsAllChapters.add(t.toLowerCase()));
+
+        return {
+            ...chap,
+            chapterName,
+            duration,
+            topics: finalTopics
+        };
+    });
+}
 
 const CURATED_BANNERS = {
     code: [
@@ -94,9 +269,9 @@ export async function POST(req) {
         const contents = PROMPT + JSON.stringify(formData);
 
         const modelsToTry = [
-            'gemini-1.5-flash',
+            'gemini-2.5-flash',
             'gemini-2.0-flash',
-            'gemini-1.5-pro'
+            'gemini-1.5-flash'
         ];
         let response = null;
         let lastError = null;
@@ -126,18 +301,24 @@ export async function POST(req) {
         let courseLayoutJson = {};
         if (response?.text) {
             try {
-                courseLayoutJson = JSON.parse(response.text);
+                const cleaned = response.text.replace(/```json/gi, '').replace(/```/g, '').trim();
+                courseLayoutJson = JSON.parse(cleaned);
             } catch {
-                courseLayoutJson = response.text;
+                try {
+                    courseLayoutJson = JSON.parse(response.text);
+                } catch (parseErr) {
+                    console.warn("JSON parse error from Gemini:", parseErr);
+                    courseLayoutJson = {};
+                }
             }
         }
 
         const courseTitle = formData?.name || "New Course";
         const userDescription = formData?.description?.trim() ? formData.description.trim() : '';
+        const requestedChapters = Math.max(1, Number(formData?.noOfChapters || 1));
 
         if (!courseLayoutJson?.course) {
             console.warn("Gemini API overloaded or unavailable; generating fallback course structure.");
-            const numChaps = Math.max(1, Number(formData?.noOfChapters || 3));
             courseLayoutJson = {
                 course: {
                     name: courseTitle,
@@ -145,19 +326,19 @@ export async function POST(req) {
                     category: formData?.category || "General",
                     level: formData?.level || "beginner",
                     includeVideo: Boolean(formData?.includeVideo),
-                    noOfChapters: numChaps,
-                    chapters: Array.from({ length: numChaps }, (_, i) => ({
-                        chapterName: `Chapter ${i + 1}: Fundamentals of ${courseTitle}`,
-                        duration: "45 mins",
-                        topics: [
-                            `Introduction to ${courseTitle} - Key Concepts`,
-                            `Core Principles & Practical Applications`,
-                            `Best Practices and Summary`
-                        ]
-                    }))
+                    noOfChapters: requestedChapters,
+                    chapters: generateFallbackChapters(courseTitle, requestedChapters)
                 }
             };
         }
+
+        // Normalize chapters: enforce EXACTLY 4 distinct, chapter-specific topics for each chapter
+        courseLayoutJson.course.chapters = normalizeChaptersWithFourTopics(
+            courseLayoutJson?.course?.chapters,
+            courseLayoutJson?.course?.name || courseTitle,
+            requestedChapters
+        );
+        courseLayoutJson.course.noOfChapters = courseLayoutJson.course.chapters.length;
 
         const aiDescription = courseLayoutJson?.course?.description?.trim() ? courseLayoutJson.course.description.trim() : '';
         const finalDescription = userDescription || aiDescription || '';
@@ -191,13 +372,11 @@ export async function POST(req) {
             }
         }
 
-
-
         const dbResult = await db.insert(coursestable).values({
             cid: courseId,
             name: formData?.name || courseLayoutJson?.course?.name,
             description: finalDescription,
-            noOfChapters: Number(formData?.noOfChapters || courseLayoutJson?.course?.noOfChapters || 1),
+            noOfChapters: Number(courseLayoutJson?.course?.noOfChapters || requestedChapters),
             includeVideo: Boolean(formData?.includeVideo),
             level: formData?.level || courseLayoutJson?.course?.level || 'beginner',
             catetgory: formData?.category || courseLayoutJson?.course?.category,

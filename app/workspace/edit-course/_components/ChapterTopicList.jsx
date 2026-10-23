@@ -20,13 +20,15 @@ function ChapterTopicList({ course }) {
                             </h2>
                         </div>
                         <div>
-                            {chapter?.topics?.map((topic, topicIndex) => (
+                            {chapter?.topics?.map((topic, topicIndex) => {
+                                const topicTitle = typeof topic === 'string' ? topic : (topic?.topic || topic?.name || `Topic ${topicIndex + 1}`);
+                                return (
                                 <div className='flex flex-col items-center' key={topicIndex}>
                                     <div className='h-10 bg-gray-300 w-1'></div>
                                     <div className='flex items-center gap-5'>
-                                        <span className={`${topicIndex % 2 == 0 && 'text-transparent'} max-w-xs text-right w-[150px] sm:w-[200px]`}>{topic}</span>
+                                        <span className={`${topicIndex % 2 == 0 && 'text-transparent'} max-w-xs text-right w-[150px] sm:w-[200px]`}>{topicTitle}</span>
                                         <h2 className='text-center rounded-full bg-gray-300 px-5 py-3 text-gray-600 font-semibold min-w-[44px]'>{topicIndex + 1}</h2>
-                                        <span className={`${topicIndex % 2 != 0 && 'text-transparent'} max-w-xs text-left w-[150px] sm:w-[200px]`}>{topic}</span>
+                                        <span className={`${topicIndex % 2 != 0 && 'text-transparent'} max-w-xs text-left w-[150px] sm:w-[200px]`}>{topicTitle}</span>
                                     </div>
                                     {topicIndex == chapter?.topics?.length - 1 && <div className='h-10 bg-gray-300 w-1'></div>}
                                     {topicIndex == chapter?.topics?.length - 1 && (
@@ -36,7 +38,7 @@ function ChapterTopicList({ course }) {
                                     )}
                                     {topicIndex == chapter?.topics?.length - 1 && <div className='h-10 bg-gray-300 w-1'></div>}
                                 </div>
-                            ))}
+                            );})}
                         </div>
                     </div>
                 ))}
